@@ -17,7 +17,7 @@ export const startFacebookSyncWorker = (): Worker => {
 
   console.log("[facebook-sync][worker] booting", {
     queue: facebookSyncQueue.queueName,
-    concurrency: Number.parseInt(process.env.FACEBOOK_SYNC_WORKER_CONCURRENCY || "5", 10),
+    concurrency: Number.parseInt(process.env.FACEBOOK_SYNC_WORKER_CONCURRENCY || "25", 10),
     redisConfigured: Boolean(process.env.REDIS_URL || process.env.QUEUE_REDIS_URL),
   });
 
