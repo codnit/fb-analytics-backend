@@ -18,6 +18,7 @@ export class PageService extends BaseService {
 
   async getPartnerPages(partnerId: string): Promise<ConnectedPageEntity[]> {
     const pages = await connectedPageRepository.getPartnerPages(partnerId);
+    console.log("The Pages are: ", pages);
     const latestJobsByPage = await syncJobRepository.getLatestCompletedByPageIds(pages.map((page) => page.id));
 
     return pages.map((page) => ({
