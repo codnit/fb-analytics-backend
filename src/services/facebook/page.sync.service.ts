@@ -17,6 +17,7 @@ import {
   type EarningsInsightEntry,
   type EarningsPostSource,
 } from "../../utils/earnings.helpers";
+import { dumpApiData } from "../../utils/debug.helpers";
 import { DEFAULT_PAGE_METRICS } from "../facebookSync.presets";
 import { encryptPageToken } from "../../utils/pageTokenCrypto";
 
@@ -127,6 +128,8 @@ export class PageSyncService {
       if (!response.success) {
         return 0;
       }
+
+      await dumpApiData(`page_earnings_${pageId}`, response.data);
 
       const pageRows = buildDailyEarningsRows(response.data as { data?: EarningsInsightEntry[] });
       const breakdownByDate = await buildContentTypeBreakdown(

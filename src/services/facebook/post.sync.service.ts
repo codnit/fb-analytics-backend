@@ -14,6 +14,7 @@ import {
   buildDailyEarningsRows,
   type EarningsInsightEntry,
 } from "../../utils/earnings.helpers";
+import { dumpApiData } from "../../utils/debug.helpers";
 import { DEFAULT_POST_METRICS } from "../facebookSync.presets";
 
 type RawInsightPayload = {
@@ -80,6 +81,10 @@ export class PostSyncService {
           until: params.until,
         }),
       ]);
+
+      if (earningsResponse.success) {
+        await dumpApiData(`post_earnings_${params.facebookPostId}`, earningsResponse.data);
+      }
 
       const [insights, earningsSaved] = await Promise.all([
         insightsResponse.success
