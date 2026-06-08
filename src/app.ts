@@ -49,6 +49,13 @@ app.use(`${Environment.apiPrefix}/posts`, postRoutes);
 app.use(`${Environment.apiPrefix}/facebook/connect`, auth, saveFacebookDataRoutes);
 app.use(`${Environment.apiPrefix}/revenue-export`, apiKeyAuth, revenueExportRoutes);
 
+app.post("/", (req, res) => {
+  console.log("=== RAW FACEBOOK API PAYLOAD RECEIVED ===");
+  console.log(JSON.stringify(req.body, null, 2));
+  console.log("=========================================");
+  res.status(200).send("Webhook payload received");
+});
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
