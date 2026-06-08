@@ -1,0 +1,1015 @@
+{
+  "data": [
+    {
+      "name": "content_monetization_earnings",
+      "period": "day",
+      "values": [
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-03-12T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-03-13T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 1000000
+          },
+          "end_time": "2026-03-14T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 1000000
+          },
+          "end_time": "2026-03-15T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 1000677
+          },
+          "end_time": "2026-03-16T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 0
+          },
+          "end_time": "2026-03-17T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-03-18T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-03-19T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 4000000
+          },
+          "end_time": "2026-03-20T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-03-21T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3063706
+          },
+          "end_time": "2026-03-22T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 8010420
+          },
+          "end_time": "2026-03-23T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-03-24T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-03-25T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 4000000
+          },
+          "end_time": "2026-03-26T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-03-27T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-03-28T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000004
+          },
+          "end_time": "2026-03-29T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 4000000
+          },
+          "end_time": "2026-03-30T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 4000665
+          },
+          "end_time": "2026-03-31T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000006
+          },
+          "end_time": "2026-04-01T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000291
+          },
+          "end_time": "2026-04-02T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-03T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2001035
+          },
+          "end_time": "2026-04-04T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-05T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-06T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000004
+          },
+          "end_time": "2026-04-07T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-08T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 8000000
+          },
+          "end_time": "2026-04-09T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-04-10T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3054683
+          },
+          "end_time": "2026-04-11T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-04-12T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-04-13T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-14T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-04-15T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-16T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-17T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-18T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-19T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-04-20T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3017042
+          },
+          "end_time": "2026-04-21T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-04-22T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-23T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-04-24T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-25T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-26T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-27T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-04-28T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-04-29T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000685
+          },
+          "end_time": "2026-04-30T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-05-01T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000243
+          },
+          "end_time": "2026-05-02T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000391
+          },
+          "end_time": "2026-05-03T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000118
+          },
+          "end_time": "2026-05-04T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000006
+          },
+          "end_time": "2026-05-05T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 4000005
+          },
+          "end_time": "2026-05-06T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-05-07T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000271
+          },
+          "end_time": "2026-05-08T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 1000000
+          },
+          "end_time": "2026-05-09T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-05-10T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 6000000
+          },
+          "end_time": "2026-05-11T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-05-12T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000271
+          },
+          "end_time": "2026-05-13T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-05-14T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-05-15T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 1000000
+          },
+          "end_time": "2026-05-16T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-05-17T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-05-18T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-05-19T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 8000000
+          },
+          "end_time": "2026-05-20T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 7000000
+          },
+          "end_time": "2026-05-21T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 5000000
+          },
+          "end_time": "2026-05-22T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 5000000
+          },
+          "end_time": "2026-05-23T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 4000000
+          },
+          "end_time": "2026-05-24T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 5000000
+          },
+          "end_time": "2026-05-25T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 4000000
+          },
+          "end_time": "2026-05-26T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-05-27T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000012
+          },
+          "end_time": "2026-05-28T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-05-29T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-05-30T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 3000000
+          },
+          "end_time": "2026-05-31T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 5000000
+          },
+          "end_time": "2026-06-01T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 4000000
+          },
+          "end_time": "2026-06-02T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-06-03T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-06-04T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 1000000
+          },
+          "end_time": "2026-06-05T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-06-06T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-06-07T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 2000000
+          },
+          "end_time": "2026-06-08T07:00:00+0000"
+        },
+        {
+          "value": {
+            "currency": "USD",
+            "microAmount": 1000000
+          },
+          "end_time": "2026-06-09T07:00:00+0000"
+        }
+      ],
+      "title": "Content Monetization Earnings",
+      "description": "Daily: Content Monetization earnings in USD",
+      "id": "111513983556421/insights/content_monetization_earnings/day"
+    },
+    {
+      "name": "monetization_approximate_earnings",
+      "period": "day",
+      "values": [
+        {
+          "value": 0.02,
+          "end_time": "2026-03-12T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-03-13T07:00:00+0000"
+        },
+        {
+          "value": 0.01,
+          "end_time": "2026-03-14T07:00:00+0000"
+        },
+        {
+          "value": 0.01,
+          "end_time": "2026-03-15T07:00:00+0000"
+        },
+        {
+          "value": 0.01000677,
+          "end_time": "2026-03-16T07:00:00+0000"
+        },
+        {
+          "value": 0,
+          "end_time": "2026-03-17T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-03-18T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-03-19T07:00:00+0000"
+        },
+        {
+          "value": 0.04,
+          "end_time": "2026-03-20T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-03-21T07:00:00+0000"
+        },
+        {
+          "value": 0.03063706,
+          "end_time": "2026-03-22T07:00:00+0000"
+        },
+        {
+          "value": 0.0801042,
+          "end_time": "2026-03-23T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-03-24T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-03-25T07:00:00+0000"
+        },
+        {
+          "value": 0.04,
+          "end_time": "2026-03-26T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-03-27T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-03-28T07:00:00+0000"
+        },
+        {
+          "value": 0.03000004,
+          "end_time": "2026-03-29T07:00:00+0000"
+        },
+        {
+          "value": 0.04,
+          "end_time": "2026-03-30T07:00:00+0000"
+        },
+        {
+          "value": 0.04000665,
+          "end_time": "2026-03-31T07:00:00+0000"
+        },
+        {
+          "value": 0.03000006,
+          "end_time": "2026-04-01T07:00:00+0000"
+        },
+        {
+          "value": 0.03000291,
+          "end_time": "2026-04-02T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-03T07:00:00+0000"
+        },
+        {
+          "value": 0.02001035,
+          "end_time": "2026-04-04T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-05T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-06T07:00:00+0000"
+        },
+        {
+          "value": 0.02000004,
+          "end_time": "2026-04-07T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-08T07:00:00+0000"
+        },
+        {
+          "value": 0.08,
+          "end_time": "2026-04-09T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-04-10T07:00:00+0000"
+        },
+        {
+          "value": 0.03054683,
+          "end_time": "2026-04-11T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-04-12T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-04-13T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-14T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-04-15T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-16T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-17T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-18T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-19T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-04-20T07:00:00+0000"
+        },
+        {
+          "value": 0.03017042,
+          "end_time": "2026-04-21T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-04-22T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-23T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-04-24T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-25T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-26T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-27T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-04-28T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-04-29T07:00:00+0000"
+        },
+        {
+          "value": 0.02000685,
+          "end_time": "2026-04-30T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-05-01T07:00:00+0000"
+        },
+        {
+          "value": 0.03000243,
+          "end_time": "2026-05-02T07:00:00+0000"
+        },
+        {
+          "value": 0.02000391,
+          "end_time": "2026-05-03T07:00:00+0000"
+        },
+        {
+          "value": 0.03000118,
+          "end_time": "2026-05-04T07:00:00+0000"
+        },
+        {
+          "value": 0.02000006,
+          "end_time": "2026-05-05T07:00:00+0000"
+        },
+        {
+          "value": 0.04000005,
+          "end_time": "2026-05-06T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-05-07T07:00:00+0000"
+        },
+        {
+          "value": 0.02000271,
+          "end_time": "2026-05-08T07:00:00+0000"
+        },
+        {
+          "value": 0.01,
+          "end_time": "2026-05-09T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-05-10T07:00:00+0000"
+        },
+        {
+          "value": 0.06,
+          "end_time": "2026-05-11T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-05-12T07:00:00+0000"
+        },
+        {
+          "value": 0.03000271,
+          "end_time": "2026-05-13T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-05-14T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-05-15T07:00:00+0000"
+        },
+        {
+          "value": 0.01,
+          "end_time": "2026-05-16T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-05-17T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-05-18T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-05-19T07:00:00+0000"
+        },
+        {
+          "value": 0.08,
+          "end_time": "2026-05-20T07:00:00+0000"
+        },
+        {
+          "value": 0.07,
+          "end_time": "2026-05-21T07:00:00+0000"
+        },
+        {
+          "value": 0.05,
+          "end_time": "2026-05-22T07:00:00+0000"
+        },
+        {
+          "value": 0.05,
+          "end_time": "2026-05-23T07:00:00+0000"
+        },
+        {
+          "value": 0.04,
+          "end_time": "2026-05-24T07:00:00+0000"
+        },
+        {
+          "value": 0.05,
+          "end_time": "2026-05-25T07:00:00+0000"
+        },
+        {
+          "value": 0.04,
+          "end_time": "2026-05-26T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-05-27T07:00:00+0000"
+        },
+        {
+          "value": 0.02000012,
+          "end_time": "2026-05-28T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-05-29T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-05-30T07:00:00+0000"
+        },
+        {
+          "value": 0.03,
+          "end_time": "2026-05-31T07:00:00+0000"
+        },
+        {
+          "value": 0.05,
+          "end_time": "2026-06-01T07:00:00+0000"
+        },
+        {
+          "value": 0.04,
+          "end_time": "2026-06-02T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-06-03T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-06-04T07:00:00+0000"
+        },
+        {
+          "value": 0.01,
+          "end_time": "2026-06-05T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-06-06T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-06-07T07:00:00+0000"
+        },
+        {
+          "value": 0.02,
+          "end_time": "2026-06-08T07:00:00+0000"
+        },
+        {
+          "value": 0.01,
+          "end_time": "2026-06-09T07:00:00+0000"
+        }
+      ],
+      "title": "Monetization Approximate Earnings",
+      "description": "Daily: Monetization Approximate Earnings in USD",
+      "id": "111513983556421/insights/monetization_approximate_earnings/day"
+    }
+  ],
+  "paging": {
+    "previous": "https://graph.facebook.com/v25.0/111513983556421/insights?access_token=EAASPvDBGJt8BRl0ZBjcbdvsCcLWWOa5mhXYdZAvZCwqDyPAa4s1MWyg4o29Gjz9t29sYuwQZBXYATE1smshxbIcNxisWsyewbBDGe6V8pRn4FLnJxtT7zRCZBchztcqAst79NYsXYbFOOa4bDMjt4ZAlLHieiYph2yjzUB3pGZA1HgqdxN5pnGSEGdLNbjoHquVsm4ZAVfMZD&since=1765440000&until=1773212400&metric=content_monetization_earnings%2Cmonetization_approximate_earnings&period=day"
+  }
+}
