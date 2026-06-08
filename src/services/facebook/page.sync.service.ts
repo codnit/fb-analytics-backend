@@ -147,7 +147,7 @@ export class PageSyncService {
           currency: row.currency,
           period: row.period,
           end_time: row.end_time,
-          content_type_breakdown: breakdownByDate.get(row.end_time.toISOString()) || createEmptyContentTypeBreakdown(),
+          content_type_breakdown: breakdownByDate.get(`${row.end_time.toISOString()}_${row.period || "day"}`) || createEmptyContentTypeBreakdown(),
           synced_at: new Date(),
         });
         savedCount += 1;

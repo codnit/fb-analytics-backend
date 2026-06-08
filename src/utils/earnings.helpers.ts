@@ -76,7 +76,8 @@ export const buildDailyEarningsRows = (insightsData: { data?: EarningsInsightEnt
         continue;
       }
 
-      const key = endTime.toISOString();
+      const periodStr = entry.period || "day";
+      const key = `${endTime.toISOString()}_${periodStr}`;
       const row = rows.get(key) || {
         end_time: endTime,
         period: entry.period || null,
@@ -169,7 +170,7 @@ export const buildContentTypeBreakdown = async (
     }
 
     for (const row of postRows) {
-      const key = row.end_time.toISOString();
+      const key = `${row.end_time.toISOString()}_${row.period || "day"}`;
       const breakdown = breakdownByDate.get(key) || createEmptyContentTypeBreakdown();
 
       breakdown[contentType].earnings_amount += row.earnings_amount;
