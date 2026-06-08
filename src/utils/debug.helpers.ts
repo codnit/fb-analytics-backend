@@ -7,11 +7,19 @@ export const dumpApiData = async (prefix: string, data: unknown) => {
     const webhookUrl = process.env.DEBUG_WEBHOOK_URL;
     if (webhookUrl) {
       try {
-        await axios.post(webhookUrl, {
-          prefix,
-          timestamp: new Date().toISOString(),
-          data
-        });
+        await axios.post(
+          webhookUrl,
+          {
+            prefix,
+            timestamp: new Date().toISOString(),
+            data
+          },
+          {
+            headers: {
+              "ngrok-skip-browser-warning": "true"
+            }
+          }
+        );
         console.log(`[debug] Sent API data to webhook for ${prefix}`);
       } catch (err) {
         console.error(`[debug] Failed to send API data to webhook for ${prefix}:`, err instanceof Error ? err.message : err);
