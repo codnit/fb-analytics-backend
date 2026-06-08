@@ -51,15 +51,15 @@ export const extractMicroAmount = (value?: EarningsInsightValue | null): number 
   }
 
   if (typeof value.microAmount === "number") {
-    return value.microAmount;
+    return value.microAmount / 1_000_000;
   }
 
   if (typeof value.microAmount === "bigint") {
-    return Number(value.microAmount);
+    return Number(value.microAmount) / 1_000_000;
   }
 
   const parsed = Number(value.microAmount);
-  return Number.isNaN(parsed) ? 0 : parsed;
+  return Number.isNaN(parsed) ? 0 : parsed / 1_000_000;
 };
 
 export const buildDailyEarningsRows = (insightsData: { data?: EarningsInsightEntry[] }): DailyEarningsRow[] => {
