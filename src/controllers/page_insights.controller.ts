@@ -31,14 +31,14 @@ export class PageInsightsController extends BaseController {
         syntheticEarnings.push({
           page_id: realFbPageId,
           metric_name: "content_monetization_earnings",
-          metric_value: { microAmount: e.earnings_amount },
+          metric_value: { value: e.earnings_amount },
           period: e.period || "day",
           end_time: e.end_time,
         });
         syntheticEarnings.push({
           page_id: realFbPageId,
           metric_name: "monetization_approximate_earnings",
-          metric_value: { microAmount: e.approximate_earnings },
+          metric_value: { value: e.approximate_earnings },
           period: e.period || "day",
           end_time: e.end_time,
         });
@@ -122,14 +122,14 @@ export class PageInsightsController extends BaseController {
         earningsByPage.get(e.page_id)?.push({
           page_id: e.page_id,
           metric_name: "content_monetization_earnings",
-          metric_value: { microAmount: e.earnings_amount },
+          metric_value: { value: e.earnings_amount },
           period: e.period || "day",
           end_time: e.end_time,
         });
         earningsByPage.get(e.page_id)?.push({
           page_id: e.page_id,
           metric_name: "monetization_approximate_earnings",
-          metric_value: { microAmount: e.approximate_earnings },
+          metric_value: { value: e.approximate_earnings },
           period: e.period || "day",
           end_time: e.end_time,
         });
@@ -206,7 +206,7 @@ export class PageInsightsController extends BaseController {
         syntheticEarnings.push({
           page_id: realFbPageId,
           metric_name: "content_monetization_earnings",
-          metric_value: { microAmount: e.earnings_amount },
+          metric_value: { value: e.earnings_amount },
           period: e.period || "day",
           end_time: e.end_time,
         });
