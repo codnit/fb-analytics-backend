@@ -45,21 +45,40 @@ export type PostWithInsightsFetcher = (
   options: { access_token: string; since?: string; until?: string }
 ) => Promise<{ success: boolean; data?: FacebookPost }>;
 
-export const extractMicroAmount = (value?: EarningsInsightValue | null): number => {
-  if (!value || value.microAmount === undefined || value.microAmount === null) {
+export const extractMicroAmount = (value?: any): number => {
+  if (value === null || value === undefined) {
     return 0;
   }
 
-  if (typeof value.microAmount === "number") {
-    return value.microAmount / 1_000_000;
+  if (typeof value === "number") {
+    return value;
   }
 
-  if (typeof value.microAmount === "bigint") {
-    return Number(value.microAmount) / 1_000_000;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
   }
 
-  const parsed = Number(value.microAmount);
-  return Number.isNaN(parsed) ? 0 : parsed / 1_000_000;
+  if (value.microAmount !== undefined && value.microAmount !== null) {
+    if (typeof value.microAmount === "number") {
+      return value.microAmount / 100_000_000;
+    }
+    if (typeof value.microAmount === "bigint") {
+      return Number(value.microAmount) / 100_000_000;
+    }
+    const parsed = Number(value.microAmount);
+    return Number.isNaN(parsed) ? 0 : parsed / 100_000_000;
+  }
+
+  if (value.value !== undefined && value.value !== null) {
+    if (typeof value.value === "number") {
+      return value.value;
+    }
+    const parsed = Number(value.value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  return 0;
 };
 
 export const buildDailyEarningsRows = (insightsData: { data?: EarningsInsightEntry[] }): DailyEarningsRow[] => {
