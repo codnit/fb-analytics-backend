@@ -234,7 +234,7 @@ export class InsightsService extends BaseGraphClient {
         // "type",
         "attachments{media,media_type,type}",
         "comments.summary(true)",
-        `insights.metric(content_monetization_earnings).period(day)${normalizedSince ? `.since(${normalizedSince})` : ""}${normalizedUntil ? `.until(${normalizedUntil})` : ""}`,
+        `insights.metric(content_monetization_earnings,monetization_approximate_earnings).period(day)${normalizedSince ? `.since(${normalizedSince})` : ""}${normalizedUntil ? `.until(${normalizedUntil})` : ""}`,
       ].join(",");
 
       const response = await this.http.get<FacebookPost>(`/${postId}`, {
