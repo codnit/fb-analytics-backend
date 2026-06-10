@@ -4,7 +4,8 @@
   "description": "Facebook Backend - Node.js Express API",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "postinstall": "prisma generate",
+    "build": "prisma generate && tsc -p tsconfig.json",
     "build:watch": "tsc -w -p tsconfig.json",
     "start": "node dist/server.js",
     "dev": "nodemon --watch src --watch server.ts --ext ts,json --exec ts-node server.ts",
