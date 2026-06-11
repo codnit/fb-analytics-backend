@@ -32,14 +32,14 @@ export class PostInsightsController extends BaseController {
         syntheticEarnings.push({
           post_id: fbPostId,
           metric_name: "content_monetization_earnings",
-          metric_value: { microAmount: e.earnings_amount },
+          metric_value: { value: e.earnings_amount },
           period: e.period || "lifetime",
           end_time: e.end_time,
         });
         syntheticEarnings.push({
           post_id: fbPostId,
           metric_name: "monetization_approximate_earnings",
-          metric_value: { microAmount: e.approximate_earnings },
+          metric_value: { value: e.approximate_earnings },
           period: e.period || "lifetime",
           end_time: e.end_time,
         });
@@ -116,14 +116,14 @@ export class PostInsightsController extends BaseController {
         earningsByPost.get(e.post_id)?.push({
           post_id: e.post_id,
           metric_name: "content_monetization_earnings",
-          metric_value: { microAmount: e.earnings_amount },
+          metric_value: { value: e.earnings_amount },
           period: e.period || "lifetime",
           end_time: e.end_time,
         });
         earningsByPost.get(e.post_id)?.push({
           post_id: e.post_id,
           metric_name: "monetization_approximate_earnings",
-          metric_value: { microAmount: e.approximate_earnings },
+          metric_value: { value: e.approximate_earnings },
           period: e.period || "lifetime",
           end_time: e.end_time,
         });
