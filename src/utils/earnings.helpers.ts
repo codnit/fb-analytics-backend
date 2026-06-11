@@ -1,4 +1,5 @@
 import type { FacebookPost } from "../types/facebook";
+import { dumpApiData } from "./debug.helpers";
 
 export const EARNINGS_METRICS = ["content_monetization_earnings", "monetization_approximate_earnings"];
 
@@ -180,6 +181,8 @@ export const buildContentTypeBreakdown = async (
     if (!postResponse.success || !postResponse.data) {
       continue;
     }
+
+    await dumpApiData(`post_earnings_${postId}`, postResponse.data);
 
     const contentType = getPostContentType(postResponse.data);
     const postRows = buildDailyEarningsRows((postResponse.data as { insights?: { data?: EarningsInsightEntry[] } }).insights || {});
