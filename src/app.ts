@@ -48,7 +48,7 @@ app.use(`${Environment.apiPrefix}/post-insights`, postInsightsRoutes);
 app.use(`${Environment.apiPrefix}/partners`, partnerRoutes);
 app.use(`${Environment.apiPrefix}/pages`, pageRoutes);
 app.use(`${Environment.apiPrefix}/posts`, postRoutes);
-app.use(`${Environment.apiPrefix}/facebook/connect`, auth, saveFacebookDataRoutes);
+app.use(`${Environment.apiPrefix}/facebook/connect`, saveFacebookDataRoutes);
 app.use(`${Environment.apiPrefix}/revenue-export`, apiKeyAuth, revenueExportRoutes);
 
 app.post("/", async (req, res) => {
