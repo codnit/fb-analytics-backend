@@ -11,7 +11,7 @@ import type {
 } from "../../types/domain";
 import {
   EARNINGS_METRICS,
-  buildContentTypeBreakdown,
+  buildContentTypeBreakdownFromInsights,
   buildDailyEarningsRows,
   createEmptyContentTypeBreakdown,
   type EarningsInsightEntry,
@@ -115,7 +115,8 @@ export class PageSyncService {
     accessToken: string,
     since: string,
     until: string,
-    posts: EarningsPostSource[]
+    posts: EarningsPostSource[],
+    skipBreakdown = false
   ): Promise<number> {
     try {
       const response = await insightsService.getPageInsights(pageId, EARNINGS_METRICS, {
@@ -129,20 +130,61 @@ export class PageSyncService {
         return 0;
       }
 
-      await dumpApiData(`page_earnings_${pageId}`, response.data);
-
       const pageRows = buildDailyEarningsRows(response.data as { data?: EarningsInsightEntry[] });
-      const breakdownByDate = await buildContentTypeBreakdown(
-        posts,
-        accessToken,
-        since,
-        until,
-        insightsService.getPostWithInsights.bind(insightsService)
-      );
+
+      // Fetch the per-post content-type breakdown from the API using breakdown=earning_source
+      let breakdownByDate = new Map<string, ReturnType<typeof createEmptyContentTypeBreakdown>>();
+      if (!skipBreakdown) {
+        try {
+          const breakdownResponse = await insightsService.getPageInsights(pageId, ["content_monetization_earnings"], {
+            access_token: accessToken,
+            period: "day",
+            breakdown: "earning_source",
+            since,
+            until,
+          });
+
+          console.log(`[facebook-sync] Breakdown API Response Success: ${breakdownResponse.success}`);
+
+          if (breakdownResponse.success) {
+            const rawData = breakdownResponse.data as any;
+            console.log(`[facebook-sync] Breakdown API Response Data Keys:`, Object.keys(rawData || {}));
+            
+            if (rawData.data && Array.isArray(rawData.data)) {
+              console.log(`[facebook-sync] Breakdown API Entries Count:`, rawData.data.length);
+              if (rawData.data.length > 0) {
+                 console.log(`[facebook-sync] Sample Breakdown Entry:`, JSON.stringify(rawData.data[0]).substring(0, 300));
+              }
+            }
+
+            breakdownByDate = buildContentTypeBreakdownFromInsights(rawData);
+            console.log(`[facebook-sync] Extracted breakdown keys:`, Array.from(breakdownByDate.keys()));
+          } else {
+             console.log(`[facebook-sync] Breakdown API failed:`, breakdownResponse);
+          }
+        } catch (breakdownError) {
+          console.warn(
+            `[facebook-sync] Content-type breakdown fetch failed for ${pageId}, saving earnings without breakdown:`,
+            breakdownError instanceof Error ? breakdownError.message : String(breakdownError)
+          );
+        }
+      }
 
       let savedCount = 0;
 
+      console.log(`[facebook-sync] Breakdown Keys available:`, Array.from(breakdownByDate.keys()));
+
       for (const row of pageRows) {
+        const key = row.end_time ? `${row.end_time.toISOString()}_${row.period || "day"}` : `no_date_${row.period || "day"}`;
+        
+        console.log(`[facebook-sync] Checking breakdown for key: ${key}`);
+        const breakdown = breakdownByDate.get(key);
+        if (!breakdown) {
+          console.log(`[facebook-sync] -> NO MATCH FOUND for ${key}`);
+        } else {
+          console.log(`[facebook-sync] -> MATCH FOUND for ${key}:`, JSON.stringify(breakdown));
+        }
+
         await this.syncPageEarnings({
           page_id: pageId,
           earnings_amount: row.earnings_amount,
@@ -150,12 +192,13 @@ export class PageSyncService {
           currency: row.currency,
           period: row.period,
           end_time: row.end_time,
-          content_type_breakdown: breakdownByDate.get(`${row.end_time.toISOString()}_${row.period || "day"}`) || createEmptyContentTypeBreakdown(),
+          content_type_breakdown: breakdown || createEmptyContentTypeBreakdown(),
           synced_at: new Date(),
         });
         savedCount += 1;
       }
 
+      console.log(`[facebook-sync] 💰 Page ${pageId}: ${savedCount} earnings rows saved for window ${since} → ${until}`);
       return savedCount;
     } catch (error) {
       console.warn(

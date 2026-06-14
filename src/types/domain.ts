@@ -208,4 +208,5 @@ export interface GraphQueryOptions {
   before?: string;
   fetchAll?: boolean;
   nextPageUrl?: string;
+  breakdown?: string;
 }

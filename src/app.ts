@@ -14,8 +14,6 @@ import revenueExportRoutes from "./routes/revenueExport.routes";
 import saveFacebookDataRoutes from "./routes/saveFacebookData.routes";
 import auth from "./middleware/auth";
 import apiKeyAuth from "./middleware/apiKeyAuth";
-import path from "path";
-import fs from "fs/promises";
 
 const app = express();
 const corsOrigin = Environment.corsOrigin === "*" ? true : Environment.corsOrigin;
@@ -50,30 +48,6 @@ app.use(`${Environment.apiPrefix}/pages`, pageRoutes);
 app.use(`${Environment.apiPrefix}/posts`, postRoutes);
 app.use(`${Environment.apiPrefix}/facebook/connect`, saveFacebookDataRoutes);
 app.use(`${Environment.apiPrefix}/revenue-export`, apiKeyAuth, revenueExportRoutes);
-
-app.post("/", async (req, res) => {
-  try {
-    console.log("=== RAW FACEBOOK API PAYLOAD RECEIVED ===");
-
-    const dir = path.join(process.cwd(), "logs", "api_dumps");
-
-    await fs.mkdir(dir, { recursive: true });
-
-    const timestamp = req.body?.timestamp || new Date().toISOString();
-    const filename = `${req.body?.prefix || "unknown"}_${timestamp.replace(/[:.]/g, "-")}.json`;
-
-    await fs.writeFile(
-      path.join(dir, filename),
-      JSON.stringify(req.body?.data || {}, null, 2)
-    );
-
-    res.status(200).send("Webhook payload received and saved locally");
-
-  } catch (err) {
-    console.error("Error saving payload:", err);
-    res.status(500).send("Error saving payload");
-  }
-});
 
 app.use((req, res) => {
   res.status(404).json({

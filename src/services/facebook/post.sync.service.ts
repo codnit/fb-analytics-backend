@@ -76,7 +76,7 @@ export class PostSyncService {
         }),
         insightsService.getPostInsights(params.facebookPostId, EARNINGS_METRICS, {
           access_token: params.accessToken,
-          period: "day",
+          period: "lifetime",
           since: params.since,
           until: params.until,
         }),

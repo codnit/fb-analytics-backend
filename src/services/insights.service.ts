@@ -28,7 +28,7 @@ export class InsightsService extends BaseGraphClient {
 
   async getPageInsights(pageId: string, metrics: string[], options: GraphQueryOptions = {}): Promise<InsightResponse> {
     try {
-      const { access_token, period = "day", since, until } = options;
+      const { access_token, period = "day", since, until, breakdown } = options;
 
       if (!access_token) throw new Error("Access token is required");
       if (!pageId) throw new Error("Page ID is required");
@@ -42,6 +42,7 @@ export class InsightsService extends BaseGraphClient {
 
       if (since) params.since = since;
       if (until) params.until = until;
+      if (breakdown) params.breakdown = breakdown;
 
       const response = await this.http.get<FacebookInsightsResponse>(`/${pageId}/insights`, {
         params,
@@ -234,7 +235,7 @@ export class InsightsService extends BaseGraphClient {
         // "type",
         "attachments{media,media_type,type}",
         "comments.summary(true)",
-        `insights.metric(content_monetization_earnings,monetization_approximate_earnings).period(day)${normalizedSince ? `.since(${normalizedSince})` : ""}${normalizedUntil ? `.until(${normalizedUntil})` : ""}`,
+        `insights.metric(content_monetization_earnings,monetization_approximate_earnings).period(lifetime)${normalizedSince ? `.since(${normalizedSince})` : ""}${normalizedUntil ? `.until(${normalizedUntil})` : ""}`,
       ].join(",");
 
       const response = await this.http.get<FacebookPost>(`/${postId}`, {
