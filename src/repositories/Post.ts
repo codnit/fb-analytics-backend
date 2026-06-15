@@ -1,6 +1,7 @@
 import { getDB } from "../config/database";
 import { BaseRepository } from "../core/base.repository";
 import type { GraphQueryOptions, PostCreateInput, PostEntity } from "../types/domain";
+import { isUuid } from "../utils/uuid";
 
 const normalizeRangeBoundary = (value: string, boundary: "since" | "until"): Date => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -22,6 +23,25 @@ export class PostRepository extends BaseRepository<PostEntity> {
     return this.createRecord(postData);
   }
 
+  // get posts by ids (handle both uuid and fb_post_id)
+  getPostsByIds = async (ids: string[]): Promise<PostEntity[]> => {
+    if (ids.length === 0) return [];
+
+    const uuidIds = ids.filter(id => isUuid(id));
+    const fbIds = ids.filter(id => !isUuid(id));
+
+    const [byUuid, byFbId] = await Promise.all([
+      uuidIds.length > 0
+        ? getDB().post.findMany({ where: { id: { in: uuidIds } } })
+        : [],
+      fbIds.length > 0
+        ? getDB().post.findMany({ where: { fb_post_id: { in: fbIds } } })
+        : [],
+    ]);
+
+    return [...byUuid, ...byFbId];
+  };
+
   getPostById(postId: string): Promise<PostEntity | null> {
     if (postId.includes("_") || postId.length > 36) {
       return this.getPostByFbPostId(postId);
@@ -40,9 +60,9 @@ export class PostRepository extends BaseRepository<PostEntity> {
     const created_time =
       since || until
         ? {
-            ...(since ? { gte: normalizeRangeBoundary(since, "since") } : {}),
-            ...(until ? { lte: normalizeRangeBoundary(until, "until") } : {}),
-          }
+          ...(since ? { gte: normalizeRangeBoundary(since, "since") } : {}),
+          ...(until ? { lte: normalizeRangeBoundary(until, "until") } : {}),
+        }
         : undefined;
 
     return this.findManyRecords({

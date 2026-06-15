@@ -25,6 +25,14 @@ export class ConnectedPageRepository extends BaseRepository<ConnectedPageEntity>
     return this.createRecord(pageData);
   }
 
+  // 
+  getPagesByFbPageIds(fbPageIds: string[]): Promise<ConnectedPageEntity[]> {
+    if (fbPageIds.length === 0) return Promise.resolve([]);
+    return getDB().connectedPage.findMany({
+      where: { fb_page_id: { in: fbPageIds } },
+    });
+  }
+
   getPageById(pageId: string): Promise<ConnectedPageEntity | null> {
     return this.findById(pageId);
   }
