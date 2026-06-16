@@ -19,6 +19,30 @@ export class PostInsightsService extends BaseService {
     return postInsightsRepository.createPostInsight(insightData);
   }
 
+  async fetchAndSavePostInsights(
+    fbPostId: string,
+    options: { since?: string; until?: string } = {}
+  ): Promise<void> {
+    const post = await postRepository.getPostByFbPostId(fbPostId);
+    const connectedPage = post
+      ? await connectedPageRepository.getPageByFbPageId(post.page_id)
+      : null;
+
+    const accessToken = resolveStoredToken(connectedPage?.page_token_encrypted);
+    if (!accessToken) {
+      throw new Error(`No access token found for post ${fbPostId}`);
+    }
+
+    await postSyncService.syncPostInsights({
+      fbPostId,
+      facebookPostId: fbPostId,
+      accessToken,
+      metrics: DEFAULT_POST_METRICS,
+      since: options.since,
+      until: options.until,
+    });
+  }
+
   async getPostInsights(
     fbPostId: string,
     options: { since?: string; until?: string } = {}

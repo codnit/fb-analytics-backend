@@ -31,21 +31,95 @@ export class PostController extends BaseController {
     }
   };
 
+  // getPagePosts = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+  //   try {
+  //     const { pageId } = req.params as Record<string, string>;
+  //     const { since, until } = req.query as Record<string, string>;
+  //     let realPageId = pageId;
+  //     if (isUuid(pageId)) {
+  //       const page = await connectedPageRepository.getPageById(pageId);
+  //       if (page) {
+  //         realPageId = page.fb_page_id;
+  //       }
+  //     }
+  //     const posts = await postService.getPagePosts(realPageId, { since, until });
+  //     console.log(`[PostController] Found ${posts.length} posts for page ${realPageId}`);
+  //     const formattedPosts = posts.map((post) => ResponseFormatter.formatPost(realPageId, post as never));
+  //     return this.ok(res, formattedPosts, "Posts retrieved successfully");
+  //   } catch (error) {
+  //     console.error(`[PostController] Error getting posts for page ${req.params.pageId}:`, error);
+  //     return next(error);
+  //   }
+  // };
+
+
+  // VERSION 2
+  // getPagePosts = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+  //   try {
+  //     const { pageId } = req.params as Record<string, string>;
+  //     const { since, until } = req.query as Record<string, string>;
+
+  //     let realPageId = pageId;
+  //     if (isUuid(pageId)) {
+  //       const page = await connectedPageRepository.getPageById(pageId);
+  //       if (page) realPageId = page.fb_page_id;
+  //     }
+
+  //     const { posts, syncStatus } = await postService.getPagePosts(realPageId, { since, until });
+
+  //     console.log(`[PostController] Found ${posts.length} posts for page ${realPageId} (${syncStatus})`);
+
+  //     const formattedPosts = posts.map((post) => ResponseFormatter.formatPost(realPageId, post as never));
+
+  //     return this.ok(res, { posts: formattedPosts, syncStatus }, "Posts retrieved successfully");
+  //   } catch (error) {
+  //     console.error(`[PostController] Error getting posts for page ${req.params.pageId}:`, error);
+  //     return next(error);
+  //   }
+  // };
+
   getPagePosts = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
       const { pageId } = req.params as Record<string, string>;
       const { since, until } = req.query as Record<string, string>;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
       let realPageId = pageId;
       if (isUuid(pageId)) {
-        const page = await connectedPageRepository.getPageById(pageId);
-        if (page) {
-          realPageId = page.fb_page_id;
-        }
+        const page_ = await connectedPageRepository.getPageById(pageId);
+        if (page_) realPageId = page_.fb_page_id;
       }
-      const posts = await postService.getPagePosts(realPageId, { since, until });
-      console.log(`[PostController] Found ${posts.length} posts for page ${realPageId}`);
+
+      const { posts, syncStatus, total } = await postService.getPagePosts(realPageId, {
+        since,
+        until,
+        page,
+        limit,
+      });
+
+      console.log(`[PostController] Page ${page} (${posts.length}/${limit}) for ${realPageId} (${syncStatus})`);
+
       const formattedPosts = posts.map((post) => ResponseFormatter.formatPost(realPageId, post as never));
-      return this.ok(res, formattedPosts, "Posts retrieved successfully");
+
+      // Calculate pagination metadata
+      const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
+      const pagination = {
+        currentPage: page,
+        pageSize: limit,
+        totalItems: total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      };
+
+      console.log(`[PostController] Pagination: page=${page}, limit=${limit}, total=${total}, totalPages=${totalPages}`);
+
+      return this.ok(
+        res,
+        { posts: formattedPosts, syncStatus, pagination },
+        "Posts retrieved successfully"
+      );
     } catch (error) {
       console.error(`[PostController] Error getting posts for page ${req.params.pageId}:`, error);
       return next(error);

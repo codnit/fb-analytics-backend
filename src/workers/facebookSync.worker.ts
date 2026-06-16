@@ -97,6 +97,9 @@ if (require.main === module) {
     .then(() => {
       console.log("[facebook-sync][worker] database connected");
       void startFacebookSyncWorker();
+      require("./postInsightsSync.worker");
+      require("./postsSync.worker");
+
     })
     .catch((error) => {
       console.error("[facebook-sync][worker] failed to connect database", error);

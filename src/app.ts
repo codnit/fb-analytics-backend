@@ -12,6 +12,7 @@ import pageInsightsRoutes from "./routes/page_insights.routes";
 import postInsightsRoutes from "./routes/post_insights.routes";
 import revenueExportRoutes from "./routes/revenueExport.routes";
 import saveFacebookDataRoutes from "./routes/saveFacebookData.routes";
+import queueRoutes from "./routes/queue.routes";
 import auth from "./middleware/auth";
 import apiKeyAuth from "./middleware/apiKeyAuth";
 
@@ -48,6 +49,7 @@ app.use(`${Environment.apiPrefix}/pages`, pageRoutes);
 app.use(`${Environment.apiPrefix}/posts`, postRoutes);
 app.use(`${Environment.apiPrefix}/facebook/connect`, saveFacebookDataRoutes);
 app.use(`${Environment.apiPrefix}/revenue-export`, apiKeyAuth, revenueExportRoutes);
+app.use(`${Environment.apiPrefix}/queues`, queueRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

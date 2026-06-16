@@ -5,12 +5,9 @@ import postRepository from "../repositories/Post";
 import earningsRepository from "../repositories/Earnings";
 import { ResponseFormatter } from "../utils/formatter";
 import { isUuid } from "../utils/uuid";
-import postSyncService from "../services/facebook/post.sync.service";
-import { resolveInsightCache, resolveStoredToken } from "../utils/insight-cache.helpers";
-import { DEFAULT_POST_METRICS } from "../services/facebookSync.presets";
-import connectedPageRepository from "../repositories/ConnectedPage";
 import postInsightsRepository from "../repositories/PostInsights";
 import { PostInsightEntity } from "../types/domain";
+import { syncQueue } from "../queues/syncQueue";
 
 export class PostInsightsController extends BaseController {
   getPostInsights = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
@@ -167,6 +164,99 @@ export class PostInsightsController extends BaseController {
   // };
   // 
 
+
+  // Second version
+  // getMultiplePostInsights = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+  //   try {
+  //     const { since: pSince, until: pUntil } = req.params as Record<string, string>;
+  //     const { since: qSince, until: qUntil } = req.query as Record<string, string>;
+  //     const since = pSince || qSince;
+  //     const until = pUntil || qUntil;
+  //     const postIds = (req.body?.postIds || req.query?.postIds) as string[];
+
+  //     if (!postIds || !Array.isArray(postIds)) {
+  //       return this.badRequest(res, "postIds array is required");
+  //     }
+
+  //     // Batch UUID resolution
+  //     const uuidIds = postIds.filter(isUuid);
+  //     const uuidPosts = uuidIds.length > 0 ? await postRepository.getPostsByIds(uuidIds) : [];
+  //     const uuidToFbId = new Map(uuidPosts.map((p) => [p.id, p.fb_post_id]));
+  //     const realPostIds = postIds.map((id) => (isUuid(id) ? uuidToFbId.get(id) || id : id));
+
+  //     // Earnings
+  //     const allEarnings = await earningsRepository.getPostEarningsByPostIdsAndRange(
+  //       realPostIds,
+  //       since ? new Date(since) : new Date(0),
+  //       until ? new Date(until) : new Date()
+  //     );
+
+  //     const earningsByPost = new Map<string, any[]>();
+  //     for (const e of allEarnings) {
+  //       if (!earningsByPost.has(e.post_id)) earningsByPost.set(e.post_id, []);
+  //       earningsByPost.get(e.post_id)?.push({
+  //         post_id: e.post_id,
+  //         metric_name: "content_monetization_earnings",
+  //         metric_value: { value: e.earnings_amount },
+  //         period: e.period || "lifetime",
+  //         end_time: e.end_time,
+  //       });
+  //       earningsByPost.get(e.post_id)?.push({
+  //         post_id: e.post_id,
+  //         metric_name: "monetization_approximate_earnings",
+  //         metric_value: { value: e.approximate_earnings },
+  //         period: e.period || "lifetime",
+  //         end_time: e.end_time,
+  //       });
+  //     }
+
+  //     // DB-only read — no FB API calls
+  //     const dbOptions = {
+  //       since: since ? new Date(since).toISOString() : undefined,
+  //       until: until ? new Date(until).toISOString() : undefined,
+  //     };
+
+  //     const results = await Promise.all(
+  //       postIds.map(async (postId, index) => {
+  //         const fbPostId = realPostIds[index];
+  //         try {
+  //           const insights = await postInsightsRepository.getPostInsights(fbPostId, dbOptions);
+  //           const postEarnings = earningsByPost.get(fbPostId) || [];
+  //           const merged = [...(insights || []), ...postEarnings];
+
+  //           return {
+  //             success: true,
+  //             postId,
+  //             data: ResponseFormatter.formatPostInsights(postId, merged as never),
+  //           };
+  //         } catch (error) {
+  //           return {
+  //             success: false,
+  //             postId,
+  //             error: error instanceof Error ? error.message : String(error),
+  //           };
+  //         }
+  //       })
+  //     );
+
+  //     // Background sync for posts with no insights data
+  //     const postsWithNoData = results
+  //       .filter(r => r.success && (!r.data || r.data.length === 0))
+  //       .map((r, i) => realPostIds[postIds.indexOf(r.postId)]);
+
+  //     if (postsWithNoData.length > 0) {
+  //       console.log(`🔄 Background sync queued for ${postsWithNoData.length} posts`);
+  //       // Fire and forget via your existing BullMQ queue
+  //       // syncQueue.add('sync-post-insights', { postIds: postsWithNoData, since, until });
+  //     }
+
+  //     return this.ok(res, results, "Multiple post insights retrieved successfully");
+  //   } catch (error) {
+  //     return next(error);
+  //   }
+  // };
+
+  // BullMqeueVersion
   getMultiplePostInsights = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
       const { since: pSince, until: pUntil } = req.params as Record<string, string>;
@@ -179,13 +269,13 @@ export class PostInsightsController extends BaseController {
         return this.badRequest(res, "postIds array is required");
       }
 
-      // Batch UUID resolution
+      // Batch UUID resolution (1 query)
       const uuidIds = postIds.filter(isUuid);
       const uuidPosts = uuidIds.length > 0 ? await postRepository.getPostsByIds(uuidIds) : [];
       const uuidToFbId = new Map(uuidPosts.map((p) => [p.id, p.fb_post_id]));
       const realPostIds = postIds.map((id) => (isUuid(id) ? uuidToFbId.get(id) || id : id));
 
-      // Earnings
+      // Earnings (1 query)
       const allEarnings = await earningsRepository.getPostEarningsByPostIdsAndRange(
         realPostIds,
         since ? new Date(since) : new Date(0),
@@ -195,60 +285,79 @@ export class PostInsightsController extends BaseController {
       const earningsByPost = new Map<string, any[]>();
       for (const e of allEarnings) {
         if (!earningsByPost.has(e.post_id)) earningsByPost.set(e.post_id, []);
-        earningsByPost.get(e.post_id)?.push({
-          post_id: e.post_id,
-          metric_name: "content_monetization_earnings",
-          metric_value: { value: e.earnings_amount },
-          period: e.period || "lifetime",
-          end_time: e.end_time,
-        });
-        earningsByPost.get(e.post_id)?.push({
-          post_id: e.post_id,
-          metric_name: "monetization_approximate_earnings",
-          metric_value: { value: e.approximate_earnings },
-          period: e.period || "lifetime",
-          end_time: e.end_time,
-        });
+        earningsByPost.get(e.post_id)?.push(
+          {
+            post_id: e.post_id,
+            metric_name: "content_monetization_earnings",
+            metric_value: { value: e.earnings_amount },
+            period: e.period || "lifetime",
+            end_time: e.end_time,
+          },
+          {
+            post_id: e.post_id,
+            metric_name: "monetization_approximate_earnings",
+            metric_value: { value: e.approximate_earnings },
+            period: e.period || "lifetime",
+            end_time: e.end_time,
+          }
+        );
       }
 
-      // DB-only read — no FB API calls
+      // DB read (1 query for ALL posts at once)
       const dbOptions = {
         since: since ? new Date(since).toISOString() : undefined,
         until: until ? new Date(until).toISOString() : undefined,
       };
 
-      const results = await Promise.all(
-        postIds.map(async (postId, index) => {
-          const fbPostId = realPostIds[index];
-          try {
-            const insights = await postInsightsRepository.getPostInsights(fbPostId, dbOptions);
-            const postEarnings = earningsByPost.get(fbPostId) || [];
-            const merged = [...(insights || []), ...postEarnings];
+      const allInsights = await postInsightsRepository.getPostInsightsBatch(realPostIds, dbOptions);
 
-            return {
-              success: true,
-              postId,
-              data: ResponseFormatter.formatPostInsights(postId, merged as never),
-            };
-          } catch (error) {
-            return {
-              success: false,
-              postId,
-              error: error instanceof Error ? error.message : String(error),
-            };
+      // Group insights by post_id in memory
+      const insightsByPost = new Map<string, any[]>();
+      for (const insight of allInsights) {
+        if (!insightsByPost.has(insight.post_id)) insightsByPost.set(insight.post_id, []);
+        insightsByPost.get(insight.post_id)!.push(insight);
+      }
+
+      // Build results purely from memory — zero async calls here
+      const results = postIds.map((postId, index) => {
+        const fbPostId = realPostIds[index];
+        try {
+          const insights = insightsByPost.get(fbPostId) || [];
+          const postEarnings = earningsByPost.get(fbPostId) || [];
+          const merged = [...insights, ...postEarnings];
+
+          return {
+            success: true,
+            postId,
+            data: ResponseFormatter.formatPostInsights(postId, merged as never),
+            syncStatus: insights.length === 0 ? "pending" : "ready", // tell frontend
+          };
+        } catch (error) {
+          return {
+            success: false,
+            postId,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+      });
+
+      // Queue missing posts for background sync — fire and forget
+      const missingFbPostIds = results
+        .filter(r => r.success && r.syncStatus === "pending")
+        .map(r => realPostIds[postIds.indexOf(r.postId)])
+        .filter(Boolean);
+
+      if (missingFbPostIds.length > 0) {
+        console.log(`🔄 Queuing ${missingFbPostIds.length} posts for background sync`);
+        await syncQueue.add(
+          "sync-post-insights",
+          { postIds: missingFbPostIds, since, until },
+          {
+            attempts: 3,
+            backoff: { type: "exponential", delay: 2000 },
+            removeOnComplete: true,
           }
-        })
-      );
-
-      // Background sync for posts with no insights data
-      const postsWithNoData = results
-        .filter(r => r.success && (!r.data || r.data.length === 0))
-        .map((r, i) => realPostIds[postIds.indexOf(r.postId)]);
-
-      if (postsWithNoData.length > 0) {
-        console.log(`🔄 Background sync queued for ${postsWithNoData.length} posts`);
-        // Fire and forget via your existing BullMQ queue
-        // syncQueue.add('sync-post-insights', { postIds: postsWithNoData, since, until });
+        );
       }
 
       return this.ok(res, results, "Multiple post insights retrieved successfully");

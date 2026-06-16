@@ -75,13 +75,33 @@ export const getStoredInsightWindow = (since: Date, until: Date): { since: Date;
   };
 };
 
+const CHUNK_DAYS = 7; // tune this — smaller = more frequent UI updates, more API calls
+
+const splitIntoChunks = (since: Date, until: Date): DateWindow[] => {
+  const chunks: DateWindow[] = [];
+  let chunkStart = since;
+
+  while (chunkStart < until) {
+    const chunkEnd = new Date(
+      Math.min(shiftDays(chunkStart, CHUNK_DAYS).getTime(), until.getTime())
+    );
+    chunks.push({
+      since: chunkStart.toISOString(),
+      until: chunkEnd.toISOString(),
+    });
+    chunkStart = chunkEnd;
+  }
+
+  return chunks;
+};
+
 export const getMissingWindows = (
   requestedSince: Date,
   requestedUntil: Date,
   coverage: CoverageBounds | null
 ): DateWindow[] => {
   if (!coverage) {
-    return [{ since: requestedSince.toISOString(), until: requestedUntil.toISOString() }];
+    return splitIntoChunks(requestedSince, requestedUntil);
   }
 
   const windows: DateWindow[] = [];
@@ -89,21 +109,47 @@ export const getMissingWindows = (
   const suffixSince = shiftDays(coverage.latest, 1);
 
   if (requestedSince < coverage.earliest && requestedSince <= prefixUntil) {
-    windows.push({
-      since: requestedSince.toISOString(),
-      until: new Date(Math.min(prefixUntil.getTime(), requestedUntil.getTime())).toISOString(),
-    });
+    const prefixEnd = new Date(Math.min(prefixUntil.getTime(), requestedUntil.getTime()));
+    windows.push(...splitIntoChunks(requestedSince, prefixEnd));
   }
 
   if (requestedUntil > coverage.latest && suffixSince <= requestedUntil) {
-    windows.push({
-      since: new Date(Math.max(suffixSince.getTime(), requestedSince.getTime())).toISOString(),
-      until: requestedUntil.toISOString(),
-    });
+    const suffixStart = new Date(Math.max(suffixSince.getTime(), requestedSince.getTime()));
+    windows.push(...splitIntoChunks(suffixStart, requestedUntil));
   }
 
   return windows;
 };
+
+// export const getMissingWindows = (
+//   requestedSince: Date,
+//   requestedUntil: Date,
+//   coverage: CoverageBounds | null
+// ): DateWindow[] => {
+//   if (!coverage) {
+//     return [{ since: requestedSince.toISOString(), until: requestedUntil.toISOString() }];
+//   }
+
+//   const windows: DateWindow[] = [];
+//   const prefixUntil = shiftDays(coverage.earliest, -1);
+//   const suffixSince = shiftDays(coverage.latest, 1);
+
+//   if (requestedSince < coverage.earliest && requestedSince <= prefixUntil) {
+//     windows.push({
+//       since: requestedSince.toISOString(),
+//       until: new Date(Math.min(prefixUntil.getTime(), requestedUntil.getTime())).toISOString(),
+//     });
+//   }
+
+//   if (requestedUntil > coverage.latest && suffixSince <= requestedUntil) {
+//     windows.push({
+//       since: new Date(Math.max(suffixSince.getTime(), requestedSince.getTime())).toISOString(),
+//       until: requestedUntil.toISOString(),
+//     });
+//   }
+
+//   return windows;
+// };
 
 export const resolveStoredToken = (storedToken?: string | null): string | null => {
   if (!storedToken) {

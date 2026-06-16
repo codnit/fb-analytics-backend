@@ -74,6 +74,41 @@ export class PostRepository extends BaseRepository<PostEntity> {
     });
   }
 
+  async getPagePostsPaginated(
+    pageId: string,
+    options: { since?: string; until?: string },
+    page: number,
+    limit: number
+  ): Promise<{ posts: PostEntity[]; total: number }> {
+    const { since, until } = options;
+    const offset = (page - 1) * limit;
+
+    const created_time =
+      since || until
+        ? {
+          ...(since ? { gte: normalizeRangeBoundary(since, "since") } : {}),
+          ...(until ? { lte: normalizeRangeBoundary(until, "until") } : {}),
+        }
+        : undefined;
+
+    const where = {
+      page_id: pageId,
+      ...(created_time ? { created_time } : {}),
+    };
+
+    const [posts, total] = await Promise.all([
+      this.delegate.findMany({
+        where,
+        orderBy: { created_time: "desc" },
+        skip: offset,
+        take: limit,
+      }),
+      this.delegate.count({ where }),
+    ]);
+
+    return { posts, total };
+  }
+
   updatePost(postId: string, updates: Partial<PostCreateInput>): Promise<PostEntity> {
     return this.updateRecord({ id: postId }, updates);
   }

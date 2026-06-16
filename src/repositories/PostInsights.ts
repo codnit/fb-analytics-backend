@@ -41,6 +41,30 @@ export class PostInsightsRepository extends BaseRepository<PostInsightEntity> {
     });
   }
 
+  getPostInsightsBatch(
+    fbPostIds: string[],
+    options: { since?: string; until?: string } = {}
+  ): Promise<PostInsightEntity[]> {
+    if (fbPostIds.length === 0) return Promise.resolve([]);
+
+    const endTimeFilter: AnyRecord = {
+      ...(toDate(options.since) ? { gte: toDate(options.since) } : {}),
+      ...(toDate(options.until) ? { lte: toDate(options.until) } : {}),
+    };
+
+    return this.findManyRecords({
+      where: {
+        post_id: { in: fbPostIds },          // ← only diff from getPostInsights
+        OR: [
+          ...(Object.keys(endTimeFilter).length > 0 ? [{ end_time: endTimeFilter }] : []),
+          { period: "lifetime" },
+          { end_time: null },
+        ],
+      },
+      orderBy: [{ end_time: "desc" }, { synced_at: "desc" }],
+    });
+  }
+
   getPostMetrics(fbPostId: string, metricName: string, options: { since?: string; until?: string } = {}): Promise<PostInsightEntity[]> {
     const endTimeFilter: AnyRecord = {
       ...(toDate(options.since) ? { gte: toDate(options.since) } : {}),

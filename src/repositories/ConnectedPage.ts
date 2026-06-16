@@ -15,6 +15,9 @@ const normalizeFanCount = (fanCount?: bigint | number | string): bigint | number
 };
 
 export class ConnectedPageRepository extends BaseRepository<ConnectedPageEntity> {
+  static getPageByFbPageId(pageId: string) {
+    throw new Error("Method not implemented.");
+  }
   protected readonly tableName = "connected_pages";
 
   protected get delegate() {
