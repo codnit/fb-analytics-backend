@@ -16,6 +16,10 @@ export class PageService extends BaseService {
     return connectedPageRepository.getPageById(pageId);
   }
 
+  getPageByFbPageId(fbPageId: string): Promise<ConnectedPageEntity | null> {
+    return connectedPageRepository.getPageByFbPageId(fbPageId);
+  }
+
   async getPartnerPages(partnerId: string): Promise<ConnectedPageEntity[]> {
     const pages = await connectedPageRepository.getPartnerPages(partnerId);
     console.log("The Pages are: ", pages);
@@ -29,6 +33,16 @@ export class PageService extends BaseService {
 
   updatePage(pageId: string, updates: Partial<ConnectedPageCreateInput>): Promise<ConnectedPageEntity> {
     return connectedPageRepository.updatePage(pageId, updates);
+  }
+
+  async getAllPages(): Promise<ConnectedPageEntity[]> {
+    const pages = await connectedPageRepository.getAllActivePages();
+    const latestJobsByPage = await syncJobRepository.getLatestCompletedByPageIds(pages.map((page) => page.id));
+
+    return pages.map((page) => ({
+      ...page,
+      latest_sync_completed_at: latestJobsByPage.get(page.id)?.completed_at || null,
+    }));
   }
 }
 

@@ -16,6 +16,9 @@ declare module "express" {
     body: ReqBody;
     query: ReqQuery;
     originalUrl: string;
+    method: string;
+    ip: string;
+    socket: { remoteAddress?: string };
     headers: Record<string, string | string[] | undefined>;
   }
 
@@ -23,6 +26,11 @@ declare module "express" {
     status(code: number): Response<ResBody>;
     json(body: ResBody): Response<ResBody>;
     send(body?: any): Response<ResBody>;
+    sendFile(path: string, options?: any, callback?: (err?: Error) => void): void;
+    setHeader(name: string, value: string | string[]): Response<ResBody>;
+    write(chunk: any, ...args: any[]): boolean;
+    end(chunk?: any, ...args: any[]): Response<ResBody>;
+    statusCode: number;
   }
 
   export type NextFunction = (err?: any) => void;
@@ -32,7 +40,9 @@ declare module "express" {
   export interface Router {
     get(path: string, ...handlers: RequestHandler[]): Router;
     post(path: string, ...handlers: RequestHandler[]): Router;
+    put(path: string, ...handlers: RequestHandler[]): Router;
     patch(path: string, ...handlers: RequestHandler[]): Router;
+    delete(path: string, ...handlers: RequestHandler[]): Router;
     use(path: string, ...handlers: Array<RequestHandler | ErrorRequestHandler | Router>): Router;
     use(...handlers: Array<RequestHandler | ErrorRequestHandler | Router>): Router;
   }
@@ -104,6 +114,9 @@ declare module "axios" {
     headers?: Record<string, string>;
     timeout?: number;
     baseURL?: string;
+    url?: string;
+    method?: string;
+    [key: string]: any;
   }
 
   export interface AxiosResponse<T = any> {
@@ -116,9 +129,23 @@ declare module "axios" {
 
   export interface AxiosError<T = any> extends Error {
     response?: AxiosResponse<T>;
+    config?: AxiosRequestConfig;
+    isAxiosError: boolean;
+  }
+
+  export interface AxiosInterceptorManager<V> {
+    use(
+      onFulfilled?: (value: V) => V | Promise<V>,
+      onRejected?: (error: any) => any
+    ): number;
+    eject(id: number): void;
   }
 
   export interface AxiosInstance {
+    interceptors: {
+      request: AxiosInterceptorManager<AxiosRequestConfig>;
+      response: AxiosInterceptorManager<AxiosResponse>;
+    };
     get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
     post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
   }

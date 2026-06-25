@@ -7,7 +7,10 @@ export class PageController extends BaseController {
   getPageById = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
       const { pageId } = req.params as Record<string, string>;
-      const page = await pageService.getPageById(pageId);
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(pageId);
+      const page = isUuid
+        ? await pageService.getPageById(pageId)
+        : await pageService.getPageByFbPageId(pageId);
 
       if (!page) {
         return this.notFound(res, "Page not found");
@@ -37,6 +40,16 @@ export class PageController extends BaseController {
       const page = await pageService.createConnectedPage(pageData as never);
       const formattedPage = ResponseFormatter.formatConnectedPage(page.partner_id, page as never);
       return this.created(res, formattedPage, "Page created successfully");
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  getAllPages = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+    try {
+      const pages = await pageService.getAllPages();
+      const formattedPages = pages.map((page) => ResponseFormatter.formatConnectedPage(page.partner_id, page as never));
+      return this.ok(res, formattedPages, "All pages retrieved successfully");
     } catch (error) {
       return next(error);
     }

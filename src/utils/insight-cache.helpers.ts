@@ -186,6 +186,10 @@ export const resolveInsightCache = async <TEntity extends InsightEntityWithEndTi
     : await params.loadAllFromDb(params.entityId, dbOptions);
 
   const coverage = getCoverageBounds(existing);
+  if (existing.length > 0 && !coverage) {
+    return existing;
+  }
+
   const missingWindows = getMissingWindows(storedWindow.since, storedWindow.until, coverage);
 
   if (missingWindows.length === 0) {

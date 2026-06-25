@@ -1,5 +1,5 @@
 export const DEFAULT_PAGE_METRICS = [
-  "page_impressions_unique",
+  // "page_impressions_unique",
   "page_post_engagements",
   "page_media_view",
   "page_follows",
@@ -8,10 +8,10 @@ export const DEFAULT_PAGE_METRICS = [
 ];
 
 export const DEFAULT_POST_METRICS = [
-  "post_impressions_unique",
+  // "post_impressions_unique",
   "post_media_view",
-  "post_impressions_organic_unique",
-  "post_impressions_paid_unique",
+  // "post_impressions_organic_unique",
+  // "post_impressions_paid_unique",
   "post_reactions_by_type_total",
   "post_clicks_by_type",
   "post_video_views",

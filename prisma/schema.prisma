@@ -148,3 +148,14 @@ model SyncJob {
   @@index([page_id, job_type, created_at])
   @@map("sync_jobs")
 }
+
+model Admin {
+  id                 String    @id @default(uuid()) @db.Uuid
+  email              String    @unique
+  password_hash      String
+  reset_token        String?
+  reset_token_expiry DateTime?
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@map("admins")
+}

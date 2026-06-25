@@ -2,10 +2,12 @@ import "dotenv/config";
 import app from "./src/app";
 import { connectDB } from "./src/config/database";
 import { Environment } from "./src/config/environment";
+import adminAuthController from "./src/controllers/adminAuth.controller";
 
 const startServer = async (): Promise<void> => {
   try {
     await connectDB();
+    await adminAuthController.ensureAdminExists();
 
     // Register repeatable cron jobs in BullMQ (safe to call on every restart)
     const { startCronScheduler } = await import("./src/cron/scheduler");
