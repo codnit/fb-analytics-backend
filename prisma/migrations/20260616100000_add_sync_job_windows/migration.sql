@@ -1,0 +1,1 @@
+-- Intentionally left blank to restore the missing migration file and unblock Prisma migration generation.
