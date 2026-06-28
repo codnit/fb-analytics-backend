@@ -8,12 +8,19 @@ datasource db {
 }
 
 model Partner {
-  id         String   @id @default(uuid()) @db.Uuid
-  user_id    String   @unique
-  name       String?
-  email      String?
-  company    String?
-  created_at DateTime @default(now()) @db.Timestamptz(6)
+  id               String   @id @default(uuid()) @db.Uuid
+  user_id          String   @unique
+  name             String?
+  email            String?
+  phone            String?
+  country          String?
+  company          String?
+  publisher_type   String?
+  website_url      String?
+  niche_category   String?
+  reason_joining   String?
+  password_hash    String?
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("partners")
 }

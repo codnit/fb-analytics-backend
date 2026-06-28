@@ -29,9 +29,13 @@ export class FacebookSyncOrchestrator extends BaseService {
     super("FacebookSyncOrchestrator");
   }
 
-  async initialConnectionSync(accessToken: string): Promise<InitialConnectionSyncResult> {
+  async initialConnectionSync(
+    accessToken: string,
+    registrationData?: any,
+    partnerId?: string
+  ): Promise<InitialConnectionSyncResult> {
     return this.run("initialConnectionSync", async () => {
-      const partner = await partnerSyncService.syncPartner(accessToken);
+      const partner = await partnerSyncService.syncPartner(accessToken, registrationData, partnerId);
       const pagesResponse = await insightsService.getUserPages({ access_token: accessToken });
       const queuedPages: InitialConnectionSyncResult["queuedPages"] = [];
       const errors: InitialConnectionSyncResult["errors"] = [];

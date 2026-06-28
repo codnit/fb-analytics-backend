@@ -3,17 +3,35 @@ import partnerRepository from "../../repositories/Partner";
 import type { PartnerCreateInput, PartnerEntity } from "../../types/domain";
 
 export class PartnerSyncService {
-  async syncPartner(accessToken: string): Promise<PartnerEntity> {
+  async syncPartner(accessToken: string, registrationData?: any, partnerId?: string): Promise<PartnerEntity> {
     const fbUser = await insightsService.getUserDetails({ access_token: accessToken });
     const user = fbUser.data as { id: string; name?: string; email?: string };
 
-    const partnerInput: PartnerCreateInput = {
-      user_id: user.id,
-      name: user.name || null,
-      email: user.email || null,
+    const partnerInput: Partial<PartnerCreateInput> = {
+      name: registrationData?.name || user.name || undefined,
+      email: registrationData?.email || user.email || undefined,
+      phone: registrationData?.phone || undefined,
+      country: registrationData?.country || undefined,
+      company: registrationData?.company || undefined,
+      publisher_type: registrationData?.publisher_type || undefined,
+      website_url: registrationData?.website_url || undefined,
+      niche_category: registrationData?.niche_category || undefined,
+      reason_joining: registrationData?.reason_joining || undefined,
     };
+    
+    // Remove undefined values
+    Object.keys(partnerInput).forEach(key => partnerInput[key as keyof typeof partnerInput] === undefined && delete partnerInput[key as keyof typeof partnerInput]);
 
-    return partnerRepository.upsertPartner(partnerInput);
+    if (partnerId) {
+      partnerInput.user_id = user.id;
+      return partnerRepository.updatePartner(partnerId, partnerInput);
+    } else {
+      const fullInput: PartnerCreateInput = {
+        user_id: user.id,
+        ...partnerInput
+      };
+      return partnerRepository.upsertPartner(fullInput);
+    }
   }
 }
 

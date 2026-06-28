@@ -8,8 +8,8 @@ import type {
 import orchestrator from "./facebook/sync.orchestrator";
 
 export class SaveFacebookDataService {
-  initialConnectionSync(accessToken: string): Promise<InitialConnectionSyncResult> {
-    return orchestrator.initialConnectionSync(accessToken);
+  async initialConnectionSync(accessToken: string, registrationData?: any, partnerId?: string) {
+    return orchestrator.initialConnectionSync(accessToken, registrationData, partnerId);
   }
 
   processPageSyncJob(payload: PageSyncJobPayload): Promise<PageSyncJobResult> {

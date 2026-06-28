@@ -5,6 +5,7 @@ import saveFacebookDataService from "../services/saveFacebookData.service";
 import insightsService from "../services/insights.service";
 import connectedPageRepository from "../repositories/ConnectedPage";
 import partnerRepository from "../repositories/Partner";
+import { isPartnerOnboardingComplete } from "../utils/partnerOnboarding";
 import {
   DEFAULT_SYNC_WINDOW_DAYS,
   DEFAULT_POST_FETCH_LIMIT,
@@ -13,10 +14,13 @@ import {
   DEFAULT_POST_METRICS,
 } from "../services/facebookSync.presets";
 
+import jwt from "jsonwebtoken";
+const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+
 export class SaveFacebookDataController extends BaseController {
   initialConnectionSync = async (req: Request, res: Response): Promise<Response | void> => {
     try {
-      const body = req.body as { access_token?: string; accessToken?: string };
+      const body = req.body as { access_token?: string; accessToken?: string; registrationData?: any };
       const authReq = req as Request & { facebookAuth?: { userLongToken?: string } };
       const accessToken = authReq.facebookAuth?.userLongToken || body.access_token || body.accessToken;
 
@@ -24,12 +28,29 @@ export class SaveFacebookDataController extends BaseController {
         return this.badRequest(res, "access_token is required");
       }
 
-      const result = await saveFacebookDataService.initialConnectionSync(accessToken);
+      const authHeader = req.headers.authorization as string | undefined;
+      let partnerId: string | undefined = undefined;
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.split(" ")[1];
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET) as any;
+          partnerId = decoded.id;
+        } catch (e) {}
+      }
+
+      const result = await saveFacebookDataService.initialConnectionSync(accessToken, body.registrationData, partnerId);
+      const needsAdditionalInfo = !isPartnerOnboardingComplete(result.partner);
+      const partnerToken = !needsAdditionalInfo && result.partner?.id
+        ? jwt.sign({ id: result.partner.id, role: "partner" }, JWT_SECRET, { expiresIn: "30d" })
+        : null;
+
       return this.ok(
         res,
         {
           ...result,
           accessToken,
+          needsAdditionalInfo,
+          partnerToken,
         },
         "Initial connection sync complete"
       );

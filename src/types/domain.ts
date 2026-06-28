@@ -18,7 +18,14 @@ export interface PartnerEntity extends BaseEntity {
   user_id: string;
   name?: string | null;
   email?: string | null;
+  phone?: string | null;
+  country?: string | null;
   company?: string | null;
+  publisher_type?: string | null;
+  website_url?: string | null;
+  niche_category?: string | null;
+  reason_joining?: string | null;
+  password_hash?: string | null;
   created_at: Date;
 }
 
@@ -112,7 +119,14 @@ export interface PartnerCreateInput {
   user_id: string;
   name?: string | null;
   email?: string | null;
+  phone?: string | null;
+  country?: string | null;
   company?: string | null;
+  publisher_type?: string | null;
+  website_url?: string | null;
+  niche_category?: string | null;
+  reason_joining?: string | null;
+  password_hash?: string | null;
 }
 
 export interface ConnectedPageCreateInput {

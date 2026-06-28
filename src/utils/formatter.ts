@@ -207,7 +207,13 @@ export class ResponseFormatter {
         user_id: response.user_id || null,
         name: response.name || null,
         email: response.email || null,
+        phone: response.phone || null,
+        country: response.country || null,
         company: response.company || null,
+        publisher_type: response.publisher_type || null,
+        website_url: response.website_url || null,
+        niche_category: response.niche_category || null,
+        reason_joining: response.reason_joining || null,
         created_at: response.created_at || null,
       };
     } catch (error) {
