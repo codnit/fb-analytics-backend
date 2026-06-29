@@ -1,5 +1,6 @@
 import { BaseService } from "../../core/base.service";
 import connectedPageRepository from "../../repositories/ConnectedPage";
+import earningsRepository from "../../repositories/Earnings";
 import syncJobRepository from "../../repositories/SyncJob";
 import type { ConnectedPageCreateInput, ConnectedPageEntity } from "../../types/domain";
 
@@ -43,6 +44,16 @@ export class PageService extends BaseService {
       ...page,
       latest_sync_completed_at: latestJobsByPage.get(page.id)?.completed_at || null,
     }));
+  }
+
+  async getPagesMonetizationStatus(pageIds: string[]): Promise<Array<{ pageId: string; total: number; monetized: boolean }>> {
+    const uniquePageIds = Array.from(new Set(pageIds.filter(Boolean)));
+    const totals = await earningsRepository.getPageEarningsTotals(uniquePageIds);
+
+    return uniquePageIds.map((pageId) => {
+      const total = totals.get(pageId) || 0;
+      return { pageId, total, monetized: total > 0 };
+    });
   }
 }
 

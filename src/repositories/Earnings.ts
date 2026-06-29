@@ -87,6 +87,28 @@ export class EarningsRepository extends BaseRepository<unknown> {
     ) as unknown as CmEarningsPageEntity[];
   }
 
+  async getPageEarningsTotals(pageIds: string[]): Promise<Map<string, number>> {
+    if (pageIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.pageDelegate.groupBy({
+      by: ["page_id"],
+      where: { page_id: { in: pageIds } },
+      _sum: {
+        earnings_amount: true,
+        approximate_earnings: true,
+      },
+    });
+
+    return new Map(
+      rows.map((row) => [
+        row.page_id,
+        Number(row._sum.earnings_amount || 0) + Number(row._sum.approximate_earnings || 0),
+      ])
+    );
+  }
+
   async getPostEarningsByPostIdsAndRange(postIds: string[], start: Date, end: Date): Promise<CmEarningsPostEntity[]> {
     if (postIds.length === 0) {
       return [];

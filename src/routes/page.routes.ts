@@ -9,6 +9,7 @@ export class PageRoutes extends BaseRoute {
     this.router.get("/:fbPageId/insights/:since/:until", pageInsightsController.getPageInsights);
     this.router.get("/:fbPageId/insights/:metricName/:since/:until", pageInsightsController.getPageMetrics);
     this.router.get("/admin/all", adminAuth, pageController.getAllPages);
+    this.router.post("/monetization/status", pageController.getMonetizationStatus);
     this.router.get("/:pageId", pageController.getPageById);
     this.router.post("/", pageController.createPage);
     this.router.post("/:fbPageId/insights", pageInsightsController.createPageInsight);

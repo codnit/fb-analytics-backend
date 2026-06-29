@@ -54,6 +54,21 @@ export class PageController extends BaseController {
       return next(error);
     }
   };
+
+  getMonetizationStatus = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+    try {
+      const { pageIds } = req.body as { pageIds?: string[] };
+
+      if (!Array.isArray(pageIds)) {
+        return this.badRequest(res, "pageIds array is required");
+      }
+
+      const statuses = await pageService.getPagesMonetizationStatus(pageIds);
+      return this.ok(res, statuses, "Monetization status retrieved successfully");
+    } catch (error) {
+      return next(error);
+    }
+  };
 }
 
 export default new PageController();
