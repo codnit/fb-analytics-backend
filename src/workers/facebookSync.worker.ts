@@ -99,6 +99,7 @@ if (require.main === module) {
       void startFacebookSyncWorker();
       require("./postInsightsSync.worker");
       require("./postsSync.worker");
+      require("./postMetadataSync.worker");
 
     })
     .catch((error) => {

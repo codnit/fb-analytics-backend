@@ -254,6 +254,32 @@ export class InsightsService extends BaseGraphClient {
     }
   }
 
+  async getPostMetadata(
+    postId: string,
+    options: GraphQueryOptions = {}
+  ): Promise<{ success: true; data: FacebookPost }> {
+    try {
+      const { access_token } = options;
+
+      if (!access_token) throw new Error("Access token is required");
+      if (!postId) throw new Error("Post ID is required");
+
+      const response = await this.http.get<FacebookPost>(`/${postId}`, {
+        params: {
+          access_token,
+          fields: "id,message,created_time,permalink_url,status_type,full_picture,comments.summary(true),shares",
+        },
+      });
+
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch post metadata: ${this.extractMessage(error)}`);
+    }
+  }
+
   async getPagePostsPage(
     pageId: string,
     options: GraphQueryOptions = {}

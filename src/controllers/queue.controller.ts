@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { BaseController } from "../core/base.controller";
 import { Queue } from "bullmq";
 import { getRedisConnectionUrl } from "../config/redis";
-import { syncQueue, pagePostsSyncQueue } from "../queues/syncQueue";
+import { syncQueue, pagePostsSyncQueue, postMetadataSyncQueue } from "../queues/syncQueue";
 
 // Lazy-init a Queue handle for the facebook-sync queue (read-only, for management)
 let facebookSyncQueue: Queue | null = null;
@@ -32,6 +32,7 @@ export class QueueController extends BaseController {
         { name: "facebook-sync", instance: getFacebookSyncQueue() },
         { name: "sync-post-insights", instance: syncQueue },
         { name: "sync-page-posts", instance: pagePostsSyncQueue },
+        { name: "sync-post-metadata", instance: postMetadataSyncQueue },
       ];
 
       const results: QueueResetResult[] = [];
@@ -86,6 +87,7 @@ export class QueueController extends BaseController {
         { name: "facebook-sync", instance: getFacebookSyncQueue() },
         { name: "sync-post-insights", instance: syncQueue },
         { name: "sync-page-posts", instance: pagePostsSyncQueue },
+        { name: "sync-post-metadata", instance: postMetadataSyncQueue },
       ];
 
       const status = await Promise.all(

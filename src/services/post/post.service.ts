@@ -6,7 +6,7 @@ import type { FacebookPost } from "../../types/facebook";
 import insightsService from "../insights.service";
 import postSyncService from "../facebook/post.sync.service";
 import { DEFAULT_POST_FETCH_LIMIT } from "../facebookSync.presets";
-import { pagePostsSyncQueue } from "../../queues/syncQueue";
+import { pagePostsSyncQueue, postMetadataSyncQueue } from "../../queues/syncQueue";
 import {
   getCoverageBounds,
   getMissingWindows,
@@ -26,6 +26,8 @@ const normalizeWindowBoundary = (value: string | undefined, boundary: "since" | 
   return value;
 };
 
+const POST_METADATA_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
 export class PostService extends BaseService {
   constructor() {
     super("PostService");
@@ -43,6 +45,32 @@ export class PostService extends BaseService {
 
   getPostById(postId: string): Promise<PostEntity | null> {
     return postRepository.getPostById(postId);
+  }
+
+  private async queueStaleVisiblePostMetadataRefresh(pageId: string, posts: PostEntity[]): Promise<void> {
+    const refreshBefore = Date.now() - POST_METADATA_REFRESH_INTERVAL_MS;
+    const stalePosts = posts.filter((post) => {
+      const syncedAt = post.synced_at ? new Date(post.synced_at).getTime() : 0;
+      return Boolean(post.fb_post_id) && (!syncedAt || syncedAt < refreshBefore);
+    });
+
+    if (stalePosts.length === 0) {
+      return;
+    }
+
+    await Promise.all(
+      stalePosts.map((post) =>
+        postMetadataSyncQueue.add(
+          "sync-post-metadata",
+          { pageId, fbPostId: post.fb_post_id },
+          {
+            jobId: `post-meta-${post.fb_post_id}`,
+            removeOnComplete: true,
+            removeOnFail: true,
+          }
+        )
+      )
+    ).catch((err) => console.error("Failed to queue post metadata refresh:", err));
   }
 
   // async getPagePosts(
@@ -308,6 +336,7 @@ export class PostService extends BaseService {
     }
 
     const { posts, total } = await postRepository.getPagePostsPaginated(pageId, dbOptions, options.page, options.limit);
+    void this.queueStaleVisiblePostMetadataRefresh(pageId, posts);
 
     const syncStatus = missingWindows.length > 0 ? "pending" : "ready";
 

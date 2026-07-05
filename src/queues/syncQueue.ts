@@ -24,3 +24,15 @@ export const pagePostsSyncQueue = new Queue("sync-page-posts", {
         removeOnFail: false,
     },
 });
+
+export const postMetadataSyncQueue = new Queue("sync-post-metadata", {
+    connection: {
+        url: getRedisConnectionUrl(),
+    },
+    defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: "exponential", delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: true,
+    },
+});
