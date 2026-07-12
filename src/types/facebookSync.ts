@@ -24,6 +24,9 @@ export interface PageSyncJobPayload {
   postWriteChunkSize?: number;
   pageMetrics?: string[];
   postMetrics?: string[];
+  enablePublishing?: boolean;
+  publishingGrantedBy?: string | null;
+  grantedScopes?: string[];
 }
 
 export interface PostSyncJobPayload {

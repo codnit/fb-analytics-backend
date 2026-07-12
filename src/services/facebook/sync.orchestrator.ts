@@ -24,6 +24,18 @@ import {
 } from "../facebookSync.presets";
 import { mapLimit } from "../../utils/pLimits";
 
+const normalizeGrantedScopes = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.map((scope) => String(scope).trim()).filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value.split(",").map((scope) => scope.trim()).filter(Boolean);
+  }
+
+  return [];
+};
+
 export class FacebookSyncOrchestrator extends BaseService {
   constructor() {
     super("FacebookSyncOrchestrator");
@@ -37,6 +49,9 @@ export class FacebookSyncOrchestrator extends BaseService {
     return this.run("initialConnectionSync", async () => {
       const partner = await partnerSyncService.syncPartner(accessToken, registrationData, partnerId);
       const pagesResponse = await insightsService.getUserPages({ access_token: accessToken });
+      const enablePublishing = registrationData?.enablePublishing === true;
+      const publishingOnly = enablePublishing && registrationData?.publishingOnly === true;
+      const grantedScopes = normalizeGrantedScopes(registrationData?.facebookGrantedScopes || registrationData?.grantedScopes);
       const queuedPages: InitialConnectionSyncResult["queuedPages"] = [];
       const errors: InitialConnectionSyncResult["errors"] = [];
 
@@ -44,6 +59,28 @@ export class FacebookSyncOrchestrator extends BaseService {
         (pagesResponse.data as FacebookPage[]).map(async (fbPage) => {
           if (!fbPage?.id) return;
           try {
+            if (enablePublishing) {
+              await pageSyncService.syncPage({
+                partner_id: partner.id,
+                fb_page_id: fbPage.id,
+                page_name: fbPage.name || null,
+                page_token_encrypted: fbPage.access_token || null,
+                fan_count: fbPage.fan_count || 0,
+                category: fbPage.category || null,
+                picture_url: fbPage.picture?.data?.url || null,
+                publishing_enabled: true,
+                publishing_granted_at: new Date(),
+                publishing_granted_by: partner.id,
+                granted_scopes: grantedScopes,
+                is_active: true,
+                last_synced_at: new Date(),
+              });
+            }
+
+            if (publishingOnly) {
+              return;
+            }
+
             const job = await facebookSyncQueue.enqueuePageSync({
               partnerId: partner.id,
               accessToken,
@@ -53,6 +90,9 @@ export class FacebookSyncOrchestrator extends BaseService {
               postWriteChunkSize: DEFAULT_POST_WRITE_CHUNK,
               pageMetrics: DEFAULT_PAGE_METRICS,
               postMetrics: DEFAULT_POST_METRICS,
+              enablePublishing,
+              publishingGrantedBy: enablePublishing ? partner.id : null,
+              grantedScopes,
             });
             queuedPages.push({
               fbPageId: fbPage.id,
@@ -91,6 +131,10 @@ export class FacebookSyncOrchestrator extends BaseService {
           fan_count: fbPage.fan_count || 0,
           category: fbPage.category || null,
           picture_url: fbPage.picture?.data?.url || null,
+          publishing_enabled: payload.enablePublishing ? true : undefined,
+          publishing_granted_at: payload.enablePublishing ? new Date() : undefined,
+          publishing_granted_by: payload.enablePublishing ? payload.publishingGrantedBy || payload.partnerId : undefined,
+          granted_scopes: payload.grantedScopes,
           is_active: true,
           last_synced_at: new Date(),
         });

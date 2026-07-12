@@ -31,6 +31,11 @@ model ConnectedPage {
   fb_page_id          String
   page_name           String?
   page_token_encrypted String?
+  publishing_enabled   Boolean  @default(false)
+  publishing_granted_at DateTime? @db.Timestamptz(6)
+  publishing_granted_by String?
+  facebook_permissions Json?
+  permissions_checked_at DateTime? @db.Timestamptz(6)
   picture_url          String?
   category             String?
   fan_count           BigInt   @default(0)
@@ -42,6 +47,56 @@ model ConnectedPage {
   @@index([fb_page_id])
   @@unique([partner_id, fb_page_id])
   @@map("connected_pages")
+}
+
+model PublishingPost {
+  id                     String   @id @default(uuid()) @db.Uuid
+  page_id                String   @db.Uuid
+  fb_page_id             String
+  fb_post_id             String?
+  permalink              String?
+  post_type              String
+  message                String?
+  link                   String?
+  media_url              String?
+  media_object_key       String?
+  scheduled_publish_time DateTime? @db.Timestamptz(6)
+  status                 String   @default("pending")
+  graph_response         Json?
+  error_message          String?
+  attempt_count          Int      @default(0)
+  last_attempt_at        DateTime? @db.Timestamptz(6)
+  next_retry_at          DateTime? @db.Timestamptz(6)
+  created_by             String?
+  created_via            String   @default("api")
+  created_at             DateTime @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([page_id])
+  @@index([fb_page_id])
+  @@index([fb_post_id])
+  @@index([status])
+  @@map("publishing_posts")
+}
+
+model Notification {
+  id                    String   @id @default(uuid()) @db.Uuid
+  recipient_partner_id  String   @db.Uuid
+  connected_page_id     String   @db.Uuid
+  publishing_post_id    String   @db.Uuid
+  type                  String   @default("facebook_post_published")
+  title                 String
+  message               String?
+  page_name             String?
+  post_url              String?
+  is_read               Boolean  @default(false)
+  read_at               DateTime? @db.Timestamptz(6)
+  created_at            DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([recipient_partner_id, publishing_post_id, type])
+  @@index([recipient_partner_id, is_read, created_at])
+  @@index([publishing_post_id])
+  @@map("notifications")
 }
 
 model Post {

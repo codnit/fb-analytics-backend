@@ -63,12 +63,53 @@ export class ConnectedPageRepository extends BaseRepository<ConnectedPageEntity>
     return this.updateRecord({ id: pageId }, updates);
   }
 
+  async updatePublishingForFbPage(
+    fbPageId: string,
+    updates: Pick<
+      ConnectedPageCreateInput,
+      | "publishing_enabled"
+      | "publishing_granted_at"
+      | "publishing_granted_by"
+      | "facebook_permissions"
+      | "permissions_checked_at"
+    >
+  ): Promise<number> {
+    const result = await getDB().connectedPage.updateMany({
+      where: { fb_page_id: fbPageId },
+      data: updates,
+    });
+
+    return result.count;
+  }
+
   async upsertPage(pageData: ConnectedPageCreateInput): Promise<ConnectedPageEntity> {
-    const data = {
+    const createData = {
       partner_id: pageData.partner_id,
       fb_page_id: pageData.fb_page_id,
       page_name: pageData.page_name ?? null,
       page_token_encrypted: pageData.page_token_encrypted ?? null,
+      publishing_enabled: pageData.publishing_enabled ?? false,
+      publishing_granted_at: pageData.publishing_granted_at ?? null,
+      publishing_granted_by: pageData.publishing_granted_by ?? null,
+      facebook_permissions: pageData.facebook_permissions ?? null,
+      permissions_checked_at: pageData.permissions_checked_at ?? null,
+      picture_url: (pageData as any).picture_url ?? null,
+      category: (pageData as any).category ?? null,
+      fan_count: normalizeFanCount(pageData.fan_count),
+      is_active: pageData.is_active ?? true,
+      last_synced_at: pageData.last_synced_at ?? null,
+    };
+
+    const updateData = {
+      partner_id: pageData.partner_id,
+      fb_page_id: pageData.fb_page_id,
+      page_name: pageData.page_name ?? null,
+      page_token_encrypted: pageData.page_token_encrypted ?? null,
+      ...(pageData.publishing_enabled !== undefined ? { publishing_enabled: pageData.publishing_enabled } : {}),
+      ...(pageData.publishing_granted_at !== undefined ? { publishing_granted_at: pageData.publishing_granted_at } : {}),
+      ...(pageData.publishing_granted_by !== undefined ? { publishing_granted_by: pageData.publishing_granted_by } : {}),
+      ...(pageData.facebook_permissions !== undefined ? { facebook_permissions: pageData.facebook_permissions } : {}),
+      ...(pageData.permissions_checked_at !== undefined ? { permissions_checked_at: pageData.permissions_checked_at } : {}),
       picture_url: (pageData as any).picture_url ?? null,
       category: (pageData as any).category ?? null,
       fan_count: normalizeFanCount(pageData.fan_count),
@@ -83,8 +124,8 @@ export class ConnectedPageRepository extends BaseRepository<ConnectedPageEntity>
           fb_page_id: pageData.fb_page_id,
         },
       } as never,
-      create: data,
-      update: data,
+      create: createData,
+      update: updateData,
     });
   }
 }

@@ -111,6 +111,7 @@ export class PrismaHelpers {
       cm_earnings_page: "cmEarningsPage",
       third_party_data: "thirdPartyData",
       sync_jobs: "syncJob",
+      notifications: "notification",
     };
 
     const delegateName = tableMap[tableName];

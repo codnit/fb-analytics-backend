@@ -20,6 +20,17 @@ import {
 import { dumpApiData } from "../../utils/debug.helpers";
 import { DEFAULT_PAGE_METRICS } from "../facebookSync.presets";
 import { encryptPageToken } from "../../utils/pageTokenCrypto";
+import axios from "axios";
+import { Environment } from "../../config/environment";
+
+const normalizePermissions = (debugData: any): string[] => {
+  const scopes = Array.isArray(debugData?.scopes) ? debugData.scopes : [];
+  const granularScopes = Array.isArray(debugData?.granular_scopes)
+    ? debugData.granular_scopes.map((item: { scope?: string }) => item.scope).filter(Boolean)
+    : [];
+
+  return Array.from(new Set([...scopes, ...granularScopes])).sort();
+};
 
 export class PageSyncService {
   async syncPage(pageData: {
@@ -27,23 +38,79 @@ export class PageSyncService {
     fb_page_id: string;
     page_name?: string | null;
     page_token_encrypted?: string | null;
+    publishing_enabled?: boolean;
+    publishing_granted_at?: Date | null;
+    publishing_granted_by?: string | null;
+    granted_scopes?: string[];
     fan_count?: number | string | bigint;
     is_active?: boolean;
     picture_url?: string | null;
     category?: string | null;
     last_synced_at?: Date | null;
   }): Promise<ConnectedPageEntity> {
-    return pageRepository.upsertPage({
+    const pageAccessToken = pageData.page_token_encrypted || null;
+    const encryptedPageToken = pageAccessToken ? encryptPageToken(pageAccessToken) : null;
+    const inspectedPermissions = pageData.publishing_enabled && pageAccessToken
+      ? await this.getTokenPermissions(pageAccessToken)
+      : undefined;
+    const grantedScopes = Array.isArray(pageData.granted_scopes) ? pageData.granted_scopes : [];
+    const permissions = pageData.publishing_enabled
+      ? Array.from(new Set([...(inspectedPermissions || []), ...grantedScopes])).sort()
+      : undefined;
+    const publishingEnabled = pageData.publishing_enabled
+      ? Boolean(pageAccessToken) && permissions?.includes("pages_manage_posts") === true
+      : undefined;
+    const permissionsCheckedAt = pageData.publishing_enabled ? new Date() : undefined;
+
+    const page = await pageRepository.upsertPage({
       partner_id: pageData.partner_id,
       fb_page_id: pageData.fb_page_id,
       page_name: pageData.page_name || null,
-      page_token_encrypted: pageData.page_token_encrypted ? encryptPageToken(pageData.page_token_encrypted) : null,
+      page_token_encrypted: encryptedPageToken,
+      publishing_enabled: publishingEnabled,
+      publishing_granted_at: pageData.publishing_granted_at,
+      publishing_granted_by: pageData.publishing_granted_by,
+      facebook_permissions: permissions,
+      permissions_checked_at: permissionsCheckedAt,
       fan_count: pageData.fan_count || 0,
       picture_url: pageData.picture_url || null,
       category: pageData.category || null,
       is_active: pageData.is_active !== false,
       last_synced_at: pageData.last_synced_at || new Date(),
     } satisfies ConnectedPageCreateInput);
+
+    if (pageData.publishing_enabled) {
+      await pageRepository.updatePublishingForFbPage(pageData.fb_page_id, {
+        publishing_enabled: publishingEnabled === true,
+        publishing_granted_at: pageData.publishing_granted_at || new Date(),
+        publishing_granted_by: pageData.publishing_granted_by || pageData.partner_id,
+        facebook_permissions: permissions || [],
+        permissions_checked_at: permissionsCheckedAt || new Date(),
+      });
+    }
+
+    return page;
+  }
+
+  private async getTokenPermissions(pageAccessToken: string): Promise<string[]> {
+    const appAccessToken = Environment.facebookAppAccessToken;
+    if (!appAccessToken) {
+      return [];
+    }
+
+    try {
+      const response = await axios.get(`${Environment.facebookGraphBaseUrl}/debug_token`, {
+        params: {
+          input_token: pageAccessToken,
+          access_token: appAccessToken,
+        },
+      });
+
+      return normalizePermissions(response.data?.data);
+    } catch (error) {
+      console.warn("[facebook-sync] Unable to inspect page token permissions:", error instanceof Error ? error.message : String(error));
+      return [];
+    }
   }
 
   async syncPageInsights(params: {

@@ -1,6 +1,7 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { Environment } from "../config/environment";
 import crypto from "crypto";
+import type { Readable } from "stream";
 
 class StorageService {
   private s3Client: S3Client | null = null;
@@ -56,6 +57,47 @@ class StorageService {
       console.error("Failed to upload file to R2:", error);
       throw new Error("Failed to upload report to storage.");
     }
+  }
+
+  async uploadPublishingMedia(params: {
+    body: Buffer | Readable;
+    filename: string;
+    contentType: string;
+    pageId: string;
+  }): Promise<{ key: string; url: string }> {
+    if (!this.s3Client) {
+      throw new Error("Storage service is not configured with R2 credentials.");
+    }
+
+    const safeFilename = params.filename.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const key = `publishing-media/${params.pageId}/${crypto.randomUUID()}-${safeFilename}`;
+
+    const command = new PutObjectCommand({
+      Bucket: Environment.r2BucketName,
+      Key: key,
+      Body: params.body,
+      ContentType: params.contentType,
+    });
+
+    await this.s3Client.send(command);
+
+    return {
+      key,
+      url: `${Environment.r2PublicBaseUrl}/${key}`,
+    };
+  }
+
+  async deleteObject(key?: string | null): Promise<void> {
+    if (!key || !this.s3Client) {
+      return;
+    }
+
+    await this.s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: Environment.r2BucketName,
+        Key: key,
+      })
+    );
   }
 }
 
