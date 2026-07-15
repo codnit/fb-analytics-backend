@@ -4,6 +4,7 @@ import { SchemaRegistry } from "../utils/schema";
 
 export interface PrismaDelegate<T> {
   create(args: { data: AnyRecord }): Promise<T>;
+  delete(args: { where: AnyRecord }): Promise<T>;
   findUnique(args: { where: AnyRecord }): Promise<T | null>;
   findFirst(args: { where: AnyRecord }): Promise<T | null>;
   findMany(args?: AnyRecord): Promise<T[]>;

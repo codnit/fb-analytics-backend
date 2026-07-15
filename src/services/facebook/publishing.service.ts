@@ -24,6 +24,13 @@ type PublishPostInput = {
 type UpdatePostInput = {
   message?: string;
   scheduledPublishTime?: string;
+  mediaUrl?: string;
+  mediaObjectKey?: string;
+};
+
+export type PublishingActor = {
+  id: string;
+  type: "admin" | "partner" | "api";
 };
 
 const toScheduledDate = (value?: string): Date | null => {
@@ -65,13 +72,15 @@ export class FacebookPublishingService extends BaseGraphClient {
     super();
   }
 
-  async listPublishingPages(): Promise<ConnectedPageEntity[]> {
-    const pages = await connectedPageRepository.getAllActivePages();
-    return pages.filter((page) => this.hasPublishingPermission(page));
+  async listPublishingPages(actor?: PublishingActor): Promise<ConnectedPageEntity[]> {
+    const pages = actor?.type === "partner"
+      ? await connectedPageRepository.getPartnerPages(actor.id)
+      : await connectedPageRepository.getAllActivePages();
+    return pages.filter((page) => page.is_active && this.hasPublishingPermission(page));
   }
 
-  async publishPost(input: PublishPostInput): Promise<PublishingPostEntity> {
-    const page = await this.resolvePage(input.pageId);
+  async publishPost(input: PublishPostInput, actor?: PublishingActor): Promise<PublishingPostEntity> {
+    const page = await this.resolvePage(input.pageId, actor);
     const scheduledDate = toScheduledDate(input.scheduledPublishTime);
 
     const record = await publishingPostRepository.createPublishingPost({
@@ -89,21 +98,124 @@ export class FacebookPublishingService extends BaseGraphClient {
       created_via: input.createdVia || "api",
     });
 
-    return this.attemptPublish(record);
+    return this.attemptPublish(record, actor);
   }
 
-  async listPosts(pageId: string, status?: string): Promise<PublishingPostEntity[]> {
-    const page = await this.resolvePage(pageId);
-    return publishingPostRepository.getPagePublishingPosts(page.id, status);
+  async listPosts(
+    pageId: string,
+    status?: string,
+    actor?: PublishingActor,
+    pageNumber = 1,
+    limit = 10
+  ): Promise<{ posts: PublishingPostEntity[]; pagination: Record<string, number | boolean> }> {
+    const connectedPage = await this.resolvePage(pageId, actor);
+    const deletedPosts = await publishingPostRepository.getDeletedPublishingPosts(connectedPage.id);
+    for (const deletedPost of deletedPosts) {
+      await notificationService.deleteForPublishingPost(deletedPost.id);
+      await storageService.deleteObject(deletedPost.media_object_key).catch((error) => {
+        console.warn("[publishing] Failed to purge deleted post media object:", error instanceof Error ? error.message : String(error));
+      });
+      await publishingPostRepository.deletePublishingPost(deletedPost.id);
+    }
+    const safePage = Math.max(1, pageNumber);
+    const safeLimit = Math.min(50, Math.max(1, limit));
+    const result = await publishingPostRepository.getPagePublishingPosts(connectedPage.id, status, safePage, safeLimit);
+    const totalPages = result.total > 0 ? Math.ceil(result.total / safeLimit) : 0;
+    return {
+      posts: result.posts,
+      pagination: {
+        currentPage: safePage,
+        pageSize: safeLimit,
+        totalItems: result.total,
+        totalPages,
+        hasNextPage: safePage < totalPages,
+        hasPreviousPage: safePage > 1,
+      },
+    };
   }
 
-  async updatePost(postId: string, input: UpdatePostInput): Promise<PublishingPostEntity> {
+  async reconcileScheduledPosts(limit = 100): Promise<number> {
+    const scheduledPosts = await publishingPostRepository.getDueScheduledPosts(limit);
+    let publishedCount = 0;
+
+    for (const post of scheduledPosts) {
+      if (!post.fb_post_id) continue;
+
+      try {
+        const page = await this.resolvePage(post.page_id);
+        const accessToken = this.getPublishingToken(page);
+        const response = await this.http.get(`/${post.fb_post_id}`, {
+          params: {
+            access_token: accessToken,
+            fields: "id,is_published,permalink_url,created_time",
+          },
+        });
+        const data = response.data as {
+          id?: string;
+          is_published?: boolean;
+          permalink_url?: string;
+        };
+
+        if (data.is_published !== true) continue;
+
+        const updated = await publishingPostRepository.updatePublishingPost(post.id, {
+          status: "published",
+          permalink: data.permalink_url || post.permalink || null,
+          graph_response: response.data as never,
+          error_message: null,
+          next_retry_at: null,
+        });
+
+        if (post.media_object_key) {
+          try {
+            await storageService.deleteObject(post.media_object_key);
+            await publishingPostRepository.updatePublishingPost(post.id, {
+              media_url: null,
+              media_object_key: null,
+            });
+          } catch (cleanupError) {
+            console.warn("[publishing] Failed to delete scheduled media object:", cleanupError instanceof Error ? cleanupError.message : String(cleanupError));
+          }
+        }
+
+        await notificationService.createPublishedNotification(page, updated);
+        publishedCount++;
+      } catch (error) {
+        console.warn("[publishing] Scheduled post reconciliation failed", {
+          postId: post.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return publishedCount;
+  }
+
+  async updatePost(postId: string, input: UpdatePostInput, actor?: PublishingActor): Promise<PublishingPostEntity> {
     const post = await publishingPostRepository.getPublishingPostById(postId);
     if (!post) throw new Error("Publishing post not found");
+    if (!["published", "scheduled"].includes(post.status)) {
+      throw new Error("Only published or scheduled posts can be edited");
+    }
     if (!post.fb_post_id) throw new Error("Facebook post id is not available yet");
 
-    const page = await this.resolvePage(post.page_id);
+    const page = await this.resolvePage(post.page_id, actor);
     const accessToken = this.getPublishingToken(page);
+
+    if (input.mediaUrl) {
+      if (!["photo", "video"].includes(post.post_type)) {
+        throw new Error("Only photo and video posts support media replacement");
+      }
+
+      const scheduledDate = input.scheduledPublishTime
+        ? toScheduledDate(input.scheduledPublishTime)
+        : post.status === "scheduled"
+          ? post.scheduled_publish_time || null
+          : null;
+
+      return this.replaceMediaPost(post, page, accessToken, input, scheduledDate);
+    }
+
     const params = new URLSearchParams({ access_token: accessToken });
     const scheduledDate = toScheduledDate(input.scheduledPublishTime);
 
@@ -126,14 +238,122 @@ export class FacebookPublishingService extends BaseGraphClient {
     });
   }
 
-  async retryPost(postId: string): Promise<PublishingPostEntity> {
+  async retryPost(postId: string, actor?: PublishingActor): Promise<PublishingPostEntity> {
     const post = await publishingPostRepository.getPublishingPostById(postId);
     if (!post) throw new Error("Publishing post not found");
     if (!["failed", "failed_retryable"].includes(post.status)) {
       throw new Error("Only failed publishing posts can be retried");
     }
 
-    return this.attemptPublish(post);
+    await this.resolvePage(post.page_id, actor);
+    return this.attemptPublish(post, actor);
+  }
+
+  async getPostMediaPreview(postId: string, actor?: PublishingActor): Promise<{
+    previewUrl: string | null;
+    thumbnailUrl: string | null;
+    previewType: "image" | "video" | "link" | null;
+    linkUrl: string | null;
+  }> {
+    const post = await publishingPostRepository.getPublishingPostById(postId);
+    if (!post) throw new Error("Publishing post not found");
+    // Scheduled media remains in R2 until Meta publishes the post. Published
+    // posts use a fresh Meta attachment URL instead of the temporary upload.
+    const retainedMediaUrl = post.status === "published"
+      ? null
+      : post.media_url || null;
+    const fallback = {
+      previewUrl: retainedMediaUrl,
+      thumbnailUrl: post.post_type === "video" ? null : retainedMediaUrl,
+      previewType: post.post_type === "link"
+        ? "link" as const
+        : post.post_type === "video" && retainedMediaUrl
+          ? "video" as const
+          : retainedMediaUrl
+            ? "image" as const
+            : null,
+      linkUrl: post.link || post.permalink || null,
+    };
+    if (!post.fb_post_id || post.status === "scheduled") return fallback;
+
+    const page = await this.resolvePage(post.page_id, actor);
+    const accessToken = this.getPublishingToken(page);
+
+    if (post.status === "scheduled" && ["photo", "video"].includes(post.post_type)) {
+      try {
+        const fields = post.post_type === "video"
+          ? "source,picture,permalink_url"
+          : "source,images,permalink_url";
+        const response = await this.http.get(`/${post.fb_post_id}`, {
+          params: { access_token: accessToken, fields },
+        });
+        const imageUrl = post.post_type === "video"
+          ? response.data?.picture || null
+          : response.data?.images?.[0]?.source || response.data?.source || null;
+        const sourceUrl = response.data?.source || null;
+        return {
+          previewUrl: post.post_type === "video" ? sourceUrl || imageUrl || retainedMediaUrl : imageUrl || retainedMediaUrl,
+          thumbnailUrl: imageUrl,
+          previewType: post.post_type === "video" && sourceUrl ? "video" : imageUrl || retainedMediaUrl ? "image" : null,
+          linkUrl: response.data?.permalink_url || post.link || post.permalink || null,
+        };
+      } catch (error) {
+        console.warn("[publishing] Scheduled media preview fallback used:", error instanceof Error ? error.message : String(error));
+        return fallback;
+      }
+    }
+
+    if (post.post_type === "video") {
+      try {
+        const response = await this.http.get(`/${post.fb_post_id}`, {
+          params: {
+            access_token: accessToken,
+            fields: "source,picture,permalink_url",
+          },
+        });
+        const videoUrl = response.data?.source || null;
+        const thumbnailUrl = response.data?.picture || null;
+
+        return {
+          previewUrl: videoUrl || thumbnailUrl,
+          thumbnailUrl,
+          previewType: videoUrl ? "video" : thumbnailUrl ? "image" : null,
+          linkUrl: response.data?.permalink_url || post.link || post.permalink || null,
+        };
+      } catch (error) {
+        console.warn("[publishing] Unable to load video preview:", error instanceof Error ? error.message : String(error));
+        return fallback;
+      }
+    }
+
+    try {
+      const response = await this.http.get(`/${post.fb_post_id}`, {
+        params: {
+          access_token: accessToken,
+          fields: "attachments{media{image{src},source},url},permalink_url",
+        },
+      });
+      const attachments = Array.isArray(response.data?.attachments?.data)
+        ? response.data.attachments.data
+        : [];
+      const attachment = attachments.find((item: any) => item?.media?.image?.src || item?.media?.source || item?.url)
+        || attachments[0]
+        || null;
+      const pictureUrl = attachment?.media?.image?.src || null;
+      const sourceUrl = attachment?.media?.source || null;
+      const attachmentType = String(attachment?.media_type || attachment?.type || "").toLowerCase();
+      const isVideo = post.post_type === "video" || attachmentType.includes("video");
+      const attachmentLink = attachment?.url || attachment?.target?.url || null;
+      return {
+        previewUrl: isVideo ? sourceUrl || pictureUrl : pictureUrl,
+        thumbnailUrl: pictureUrl,
+        previewType: isVideo && sourceUrl ? "video" : post.post_type === "link" ? "link" : pictureUrl ? "image" : null,
+        linkUrl: attachmentLink || post.link || response.data?.permalink_url || post.permalink || null,
+      };
+    } catch (error) {
+      console.warn("[publishing] Unable to load post preview:", error instanceof Error ? error.message : String(error));
+      return fallback;
+    }
   }
 
   async uploadMedia(input: {
@@ -141,8 +361,8 @@ export class FacebookPublishingService extends BaseGraphClient {
     filename: string;
     contentType: string;
     body: Buffer | Readable;
-  }): Promise<{ mediaUrl: string; objectKey: string }> {
-    const page = await this.resolvePage(input.pageId);
+  }, actor?: PublishingActor): Promise<{ mediaUrl: string; objectKey: string }> {
+    const page = await this.resolvePage(input.pageId, actor);
     const uploaded = await storageService.uploadPublishingMedia({
       body: input.body,
       filename: input.filename,
@@ -156,22 +376,18 @@ export class FacebookPublishingService extends BaseGraphClient {
     };
   }
 
-  async deletePost(postId: string): Promise<PublishingPostEntity> {
+  async deletePost(postId: string, actor?: PublishingActor): Promise<PublishingPostEntity> {
     const post = await publishingPostRepository.getPublishingPostById(postId);
     if (!post) throw new Error("Publishing post not found");
 
-    const page = await this.resolvePage(post.page_id);
+    const page = await this.resolvePage(post.page_id, actor);
     const accessToken = this.getPublishingToken(page);
 
-    if (post.fb_post_id) {
-      const params = new URLSearchParams({
-        access_token: accessToken,
-        method: "delete",
-      });
-      await this.http.post(`/${post.fb_post_id}`, params, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-    }
+    await this.deleteFacebookPost(post.fb_post_id, accessToken);
+    await storageService.deleteObject(post.media_object_key).catch((error) => {
+      console.warn("[publishing] Failed to delete post media object:", error instanceof Error ? error.message : String(error));
+    });
+    await notificationService.deleteForPublishingPost(post.id);
 
     return publishingPostRepository.updatePublishingPost(post.id, {
       status: "deleted",
@@ -179,17 +395,89 @@ export class FacebookPublishingService extends BaseGraphClient {
     });
   }
 
-  private async resolvePage(pageId: string): Promise<ConnectedPageEntity> {
+  private async resolvePage(pageId: string, actor?: PublishingActor): Promise<ConnectedPageEntity> {
     const page = isUuid(pageId)
       ? await connectedPageRepository.getPageById(pageId)
       : await connectedPageRepository.getPageByFbPageId(pageId);
 
     if (!page) throw new Error("Connected page not found");
+    if (actor?.type === "partner" && page.partner_id !== actor.id) {
+      throw new Error("You are not authorized to publish to this Page");
+    }
     return page;
   }
 
-  private async attemptPublish(post: PublishingPostEntity): Promise<PublishingPostEntity> {
-    const page = await this.resolvePage(post.page_id);
+  private async replaceMediaPost(
+    post: PublishingPostEntity,
+    page: ConnectedPageEntity,
+    accessToken: string,
+    input: UpdatePostInput,
+    scheduledDate: Date | null
+  ): Promise<PublishingPostEntity> {
+    try {
+      const graphResponse = await this.sendPublishRequest(page.fb_page_id, accessToken, {
+        pageId: page.id,
+        postType: post.post_type as "photo" | "video",
+        message: input.message !== undefined ? input.message : post.message || undefined,
+        mediaUrl: input.mediaUrl,
+        mediaObjectKey: input.mediaObjectKey,
+      }, scheduledDate);
+      const newFacebookPostId = this.extractFacebookPostId(graphResponse);
+      if (!newFacebookPostId) {
+        throw new Error("Meta did not return an id for the replacement photo post");
+      }
+
+      const permalink = await this.resolveFacebookPostPermalink(page.fb_page_id, newFacebookPostId, accessToken);
+
+      try {
+        await this.deleteFacebookPost(post.fb_post_id, accessToken);
+      } catch (deleteError) {
+        await this.deleteFacebookPost(newFacebookPostId, accessToken).catch(() => undefined);
+        throw deleteError;
+      }
+
+      const updated = await publishingPostRepository.updatePublishingPost(post.id, {
+        fb_post_id: newFacebookPostId,
+        permalink,
+        message: input.message !== undefined ? input.message : post.message,
+        media_url: input.mediaUrl,
+        media_object_key: scheduledDate ? input.mediaObjectKey || null : null,
+        scheduled_publish_time: scheduledDate,
+        status: scheduledDate ? "scheduled" : "published",
+        graph_response: graphResponse as never,
+        error_message: null,
+        next_retry_at: null,
+      });
+
+      try {
+        await notificationService.updatePublishedNotification(updated);
+      } catch (notificationError) {
+        console.error("[publishing] Failed to update existing post notification:", notificationError);
+      }
+      return updated;
+    } finally {
+      if (!scheduledDate) {
+        await storageService.deleteObject(input.mediaObjectKey).catch((error) => {
+          console.warn("[publishing] Failed to delete replacement media object:", error instanceof Error ? error.message : String(error));
+        });
+      }
+    }
+  }
+
+  private async deleteFacebookPost(facebookPostId: string | null | undefined, accessToken: string): Promise<void> {
+    if (!facebookPostId) return;
+
+    const params = new URLSearchParams({
+      access_token: accessToken,
+      method: "delete",
+    });
+    await this.http.post(`/${facebookPostId}`, params, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+  }
+
+  private async attemptPublish(post: PublishingPostEntity, actor?: PublishingActor): Promise<PublishingPostEntity> {
+    const page = await this.resolvePage(post.page_id, actor);
     const accessToken = this.getPublishingToken(page);
     const attemptCount = (post.attempt_count || 0) + 1;
 
@@ -233,9 +521,17 @@ export class FacebookPublishingService extends BaseGraphClient {
         }
       }
 
-      await storageService.deleteObject(post.media_object_key).catch((error) => {
-        console.warn("[publishing] Failed to delete temporary media object:", error instanceof Error ? error.message : String(error));
-      });
+      if (status === "published" && post.media_object_key) {
+        try {
+          await storageService.deleteObject(post.media_object_key);
+          await publishingPostRepository.updatePublishingPost(post.id, {
+            media_url: null,
+            media_object_key: null,
+          });
+        } catch (error) {
+          console.warn("[publishing] Failed to delete temporary media object:", error instanceof Error ? error.message : String(error));
+        }
+      }
 
       return updated;
     } catch (error) {

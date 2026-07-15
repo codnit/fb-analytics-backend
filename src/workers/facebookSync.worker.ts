@@ -7,6 +7,7 @@ import saveFacebookDataService from "../services/saveFacebookData.service";
 import type { PageSyncJobPayload, PostSyncJobPayload } from "../types/facebookSync";
 import { cronFullSyncTask } from "../cron/tasks/fullSync.task";
 import { cronIncrementalSyncTask } from "../cron/tasks/incrementalSync.task";
+import publishingService from "../services/facebook/publishing.service";
 
 let workerInstance: Worker | null = null;
 
@@ -43,6 +44,11 @@ export const startFacebookSyncWorker = (): Worker => {
 
       if (job.name === facebookSyncQueue.jobNames.cronIncrementalSync) {
         return cronIncrementalSyncTask.execute();
+      }
+
+      if (job.name === facebookSyncQueue.jobNames.cronPublishingStatus) {
+        const publishedCount = await publishingService.reconcileScheduledPosts();
+        return { publishedCount };
       }
 
       throw new Error(`Unsupported job type: ${job.name}`);

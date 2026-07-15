@@ -1,6 +1,7 @@
 import type { ConnectedPageEntity, NotificationEntity, PublishingPostEntity } from "../../types/domain";
 import notificationRepository from "../../repositories/Notification";
 import { notificationEventBus } from "./notification.events";
+import { getFacebookPostUrl } from "../../utils/facebookPostUrl";
 
 export class NotificationService {
   async listForPartner(partnerId: string, limit = 20): Promise<{ items: NotificationEntity[]; unreadCount: number }> {
@@ -21,7 +22,7 @@ export class NotificationService {
       title: "New Facebook post published",
       message: post.message || post.link || "Your Facebook Page received a new post.",
       page_name: page.page_name || page.fb_page_id,
-      post_url: post.permalink || null,
+      post_url: getFacebookPostUrl(post),
     });
 
     void notificationEventBus.publish(page.partner_id, {
@@ -37,6 +38,14 @@ export class NotificationService {
     });
 
     return notification;
+  }
+
+  updatePublishedNotification(post: PublishingPostEntity): Promise<void> {
+    return notificationRepository.updatePublishedPostLink(post.id, getFacebookPostUrl(post), post.message || null);
+  }
+
+  deleteForPublishingPost(publishingPostId: string): Promise<void> {
+    return notificationRepository.deleteByPublishingPostId(publishingPostId);
   }
 
   markRead(notificationId: string, partnerId: string): Promise<boolean> {

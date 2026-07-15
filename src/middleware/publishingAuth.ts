@@ -22,8 +22,8 @@ export const publishingAuth = (req: Request, res: Response, next: NextFunction):
   if (authHeader.startsWith("Bearer ")) {
     try {
       const decoded = jwt.verify(authHeader.split(" ")[1], JWT_SECRET) as { id: string; role: string };
-      if (decoded.role === "admin") {
-        (req as any).publishingActor = { id: decoded.id, type: "admin" };
+      if (decoded.role === "admin" || decoded.role === "partner") {
+        (req as any).publishingActor = { id: decoded.id, type: decoded.role };
         return next();
       }
     } catch {}

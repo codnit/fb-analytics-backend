@@ -2,6 +2,7 @@ import { getDB } from "../config/database";
 import { BaseRepository } from "../core/base.repository";
 import type { NotificationCreateInput, NotificationEntity } from "../types/domain";
 import { PrismaHelpers } from "../utils/prismaHelpers";
+import { getFacebookPostUrl } from "../utils/facebookPostUrl";
 
 export class NotificationRepository extends BaseRepository<NotificationEntity> {
   protected readonly tableName = "notifications";
@@ -29,11 +30,38 @@ export class NotificationRepository extends BaseRepository<NotificationEntity> {
     return PrismaHelpers.normalizeRecord(notification) as NotificationEntity;
   }
 
-  getPartnerNotifications(partnerId: string, limit = 20): Promise<NotificationEntity[]> {
-    return this.findManyRecords({
+  async updatePublishedPostLink(publishingPostId: string, postUrl: string | null, message?: string | null): Promise<void> {
+    await getDB().notification.updateMany({
+      where: { publishing_post_id: publishingPostId },
+      data: {
+        post_url: postUrl,
+        ...(message !== undefined ? { message } : {}),
+      },
+    });
+  }
+
+  async deleteByPublishingPostId(publishingPostId: string): Promise<void> {
+    await getDB().notification.deleteMany({ where: { publishing_post_id: publishingPostId } });
+  }
+
+  async getPartnerNotifications(partnerId: string, limit = 20): Promise<NotificationEntity[]> {
+    const notifications = await this.findManyRecords({
       where: { recipient_partner_id: partnerId },
       orderBy: { created_at: "desc" },
       take: Math.min(Math.max(limit, 1), 50),
+    });
+
+    if (notifications.length === 0) return notifications;
+
+    const publishingPosts = await getDB().publishingPost.findMany({
+      where: { id: { in: notifications.map((notification) => notification.publishing_post_id) } },
+      select: { id: true, fb_page_id: true, fb_post_id: true, permalink: true },
+    });
+    const postsById = new Map(publishingPosts.map((post) => [post.id, post]));
+
+    return notifications.map((notification) => {
+      const facebookUrl = getFacebookPostUrl(postsById.get(notification.publishing_post_id));
+      return facebookUrl ? { ...notification, post_url: facebookUrl } : notification;
     });
   }
 

@@ -16,10 +16,12 @@ import { facebookSyncQueue } from "../queues/facebookSync.queue";
 export async function startCronScheduler(): Promise<void> {
   const intervalHours = Number(process.env.FULL_SYNC_INTERVAL_HOURS ?? 6);
   const intervalMs = intervalHours * 60 * 60 * 1000;
+  const publishingStatusIntervalMs = Number(process.env.PUBLISHING_STATUS_SYNC_INTERVAL_MS ?? 60000);
 
   console.log("[cron-scheduler] Registering cron jobs...", {
     fullSyncEveryHours: intervalHours,
     incrementalSyncPattern: "0 1 * * *",
+    publishingStatusEveryMs: publishingStatusIntervalMs,
   });
 
   try {
@@ -33,6 +35,11 @@ export async function startCronScheduler(): Promise<void> {
     await facebookSyncQueue.registerRepeatableJob(
       facebookSyncQueue.jobNames.cronIncrementalSync,
       { pattern: "0 1 * * *" }
+    );
+
+    await facebookSyncQueue.registerRepeatableJob(
+      facebookSyncQueue.jobNames.cronPublishingStatus,
+      { every: publishingStatusIntervalMs }
     );
 
     console.log("[cron-scheduler] ✅ All cron jobs registered successfully");

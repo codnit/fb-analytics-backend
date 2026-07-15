@@ -10,6 +10,7 @@ const jobNames = {
   postSync: "post-sync",
   cronFullSync: "cron-full-sync",
   cronIncrementalSync: "cron-incremental-sync",
+  cronPublishingStatus: "cron-publishing-status",
 } as const;
 
 let queueInstance: Queue | null = null;

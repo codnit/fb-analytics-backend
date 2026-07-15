@@ -17,7 +17,6 @@ import queueRoutes from "./routes/queue.routes";
 import authRoutes from "./routes/auth.routes";
 import adminRoutes from "./routes/admin.routes";
 import publishingRoutes from "./routes/publishing.routes";
-import auth from "./middleware/auth";
 import apiKeyAuth from "./middleware/apiKeyAuth";
 import { apiTelemetryMiddleware } from "./middleware/apiTelemetry";
 import monitorRoutes from "./routes/monitor.routes";

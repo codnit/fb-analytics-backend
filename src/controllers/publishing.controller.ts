@@ -2,18 +2,18 @@ import type { NextFunction, Request, Response } from "express";
 import fs from "fs";
 import { promises as fsPromises } from "fs";
 import { BaseController } from "../core/base.controller";
-import publishingService from "../services/facebook/publishing.service";
+import publishingService, { type PublishingActor } from "../services/facebook/publishing.service";
 
 const { IncomingForm } = require("formidable");
 
-const getActor = (req: Request): { id: string; type: string } => {
+const getActor = (req: Request): PublishingActor => {
   return (req as any).publishingActor || { id: "unknown", type: "api" };
 };
 
 export class PublishingController extends BaseController {
-  getPages = async (_req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+  getPages = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
-      const pages = await publishingService.listPublishingPages();
+      const pages = await publishingService.listPublishingPages(getActor(req));
       return this.ok(
         res,
         pages.map((page) => ({
@@ -67,7 +67,7 @@ export class PublishingController extends BaseController {
         scheduledPublishTime: body.scheduledPublishTime || body.scheduled_publish_time,
         createdBy: actor.id,
         createdVia: actor.type,
-      });
+      }, actor);
 
       return this.created(res, post, "Post submitted successfully");
     } catch (error) {
@@ -111,7 +111,7 @@ export class PublishingController extends BaseController {
           filename: file.originalFilename || file.newFilename || "media",
           contentType,
           body: fs.createReadStream(file.filepath),
-        });
+        }, getActor(req));
 
         await fsPromises.unlink(file.filepath).catch(() => undefined);
 
@@ -126,7 +126,9 @@ export class PublishingController extends BaseController {
     try {
       const { pageId } = req.params as { pageId: string };
       const { status } = req.query as { status?: string };
-      const posts = await publishingService.listPosts(pageId, status);
+      const page = Math.max(1, Number.parseInt(String(req.query.page || "1"), 10) || 1);
+      const limit = Math.min(50, Math.max(1, Number.parseInt(String(req.query.limit || "10"), 10) || 10));
+      const posts = await publishingService.listPosts(pageId, status, getActor(req), page, limit);
       return this.ok(res, posts, "Publishing posts retrieved successfully");
     } catch (error) {
       return next(error);
@@ -136,12 +138,32 @@ export class PublishingController extends BaseController {
   updatePost = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
       const { postId } = req.params as { postId: string };
-      const body = req.body as { message?: string; scheduledPublishTime?: string; scheduled_publish_time?: string };
+      const body = req.body as {
+        message?: string;
+        scheduledPublishTime?: string;
+        scheduled_publish_time?: string;
+        mediaUrl?: string;
+        media_url?: string;
+        mediaObjectKey?: string;
+        media_object_key?: string;
+      };
       const post = await publishingService.updatePost(postId, {
         message: body.message,
         scheduledPublishTime: body.scheduledPublishTime || body.scheduled_publish_time,
-      });
+        mediaUrl: body.mediaUrl || body.media_url,
+        mediaObjectKey: body.mediaObjectKey || body.media_object_key,
+      }, getActor(req));
       return this.ok(res, post, "Post updated successfully");
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  getPostMediaPreview = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+    try {
+      const { postId } = req.params as { postId: string };
+      const preview = await publishingService.getPostMediaPreview(postId, getActor(req));
+      return this.ok(res, preview, "Publishing post preview retrieved successfully");
     } catch (error) {
       return next(error);
     }
@@ -150,7 +172,7 @@ export class PublishingController extends BaseController {
   retryPost = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
       const { postId } = req.params as { postId: string };
-      const post = await publishingService.retryPost(postId);
+      const post = await publishingService.retryPost(postId, getActor(req));
       return this.ok(res, post, "Post retry submitted successfully");
     } catch (error) {
       return next(error);
@@ -160,7 +182,7 @@ export class PublishingController extends BaseController {
   deletePost = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
       const { postId } = req.params as { postId: string };
-      const post = await publishingService.deletePost(postId);
+      const post = await publishingService.deletePost(postId, getActor(req));
       return this.ok(res, post, "Post deleted successfully");
     } catch (error) {
       return next(error);

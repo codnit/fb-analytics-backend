@@ -11,6 +11,7 @@ class PublishingRoutes {
     this.router.post("/media/upload", publishingController.uploadMedia);
     this.router.post("/posts", publishingController.createPost);
     this.router.get("/pages/:pageId/posts", publishingController.listPosts);
+    this.router.get("/posts/:postId/media-preview", publishingController.getPostMediaPreview);
     this.router.patch("/posts/:postId", publishingController.updatePost);
     this.router.post("/posts/:postId/retry", publishingController.retryPost);
     this.router.delete("/posts/:postId", publishingController.deletePost);
