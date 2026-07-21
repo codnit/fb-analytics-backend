@@ -29,7 +29,9 @@ export class PageInsightsController extends BaseController {
       }
 
       // Merge earnings
-      const earnings = await earningsRepository.getPageEarnings(realFbPageId);
+      const earnings = since && until
+        ? await earningsRepository.getPageEarningsForPerformanceRange(realFbPageId, since, until)
+        : await earningsRepository.getPageEarnings(realFbPageId);
       const syntheticEarnings: any[] = [];
       for (const e of earnings) {
         syntheticEarnings.push({
@@ -120,11 +122,9 @@ export class PageInsightsController extends BaseController {
         );
       }
 
-      const allEarnings = await earningsRepository.getPageEarningsByPageIdsAndRange(
-        realPageIds,
-        since ? new Date(since) : new Date(0),
-        until ? new Date(until) : new Date()
-      );
+      const allEarnings = since && until
+        ? await earningsRepository.getPageEarningsByPageIdsAndPerformanceRange(realPageIds, since, until)
+        : await earningsRepository.getPageEarningsByPageIdsAndRange(realPageIds, new Date(0), new Date());
 
       const earningsByPage = new Map<string, any[]>();
       for (const e of allEarnings) {
@@ -214,7 +214,9 @@ export class PageInsightsController extends BaseController {
         await pageInsightsService.ensurePageEarnings(realFbPageId, since, until);
       }
 
-      const earnings = await earningsRepository.getPageEarnings(realFbPageId);
+      const earnings = since && until
+        ? await earningsRepository.getPageEarningsForPerformanceRange(realFbPageId, since, until)
+        : await earningsRepository.getPageEarnings(realFbPageId);
       const syntheticEarnings: any[] = [];
       for (const e of earnings) {
         syntheticEarnings.push({

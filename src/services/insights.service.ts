@@ -297,7 +297,7 @@ export class InsightsService extends BaseGraphClient {
         const params: Record<string, unknown> = {
           access_token,
           limit,
-          fields: "id,message,created_time,permalink_url,status_type,full_picture,comments.summary(true),shares",
+          fields: "id,message,created_time,permalink_url,status_type,full_picture,comments.limit(0).summary(true),shares",
         };
 
         if (since) params.since = since;

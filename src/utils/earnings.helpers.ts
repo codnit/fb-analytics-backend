@@ -3,6 +3,45 @@ import { dumpApiData } from "./debug.helpers";
 
 export const EARNINGS_METRICS = ["content_monetization_earnings", "monetization_approximate_earnings"];
 
+const EARNINGS_DAY_MS = 24 * 60 * 60 * 1000;
+
+const toUtcDayStart = (value: string | Date): Date => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid earnings date: ${String(value)}`);
+  }
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+};
+
+/**
+ * Meta daily earnings use the following day's end_time as the storage key.
+ * A requested performance window [since, until) therefore maps to stored
+ * end_time values in [since + 1 day, until + 1 day).
+ */
+export const getEarningsStorageWindow = (
+  since: string | Date,
+  until: string | Date
+): { startInclusive: Date; endExclusive: Date } => {
+  const performanceStart = toUtcDayStart(since);
+  const performanceEnd = toUtcDayStart(until);
+
+  if (performanceEnd < performanceStart) {
+    throw new Error("Earnings until date must not be earlier than since date");
+  }
+
+  return {
+    startInclusive: new Date(performanceStart.getTime() + EARNINGS_DAY_MS),
+    endExclusive: new Date(performanceEnd.getTime() + EARNINGS_DAY_MS),
+  };
+};
+
+export const getExpectedEarningsDayCount = (since: string | Date, until: string | Date): number => {
+  const performanceStart = toUtcDayStart(since);
+  const performanceEnd = toUtcDayStart(until);
+  return Math.max(0, Math.round((performanceEnd.getTime() - performanceStart.getTime()) / EARNINGS_DAY_MS));
+};
+
 export type EarningsInsightValue = {
   currency?: string;
   microAmount?: number | string | bigint;

@@ -10,6 +10,7 @@ import {
   resolveInsightCache,
   resolveStoredToken,
 } from "../../utils/insight-cache.helpers";
+import { getExpectedEarningsDayCount } from "../../utils/earnings.helpers";
 
 export class PageInsightsService extends BaseService {
   constructor() {
@@ -22,8 +23,8 @@ export class PageInsightsService extends BaseService {
 
   /**
    * Completely independent from the page_insights cache.
-   * Checks cm_earnings_page for the requested date range and
-   * fetches from the Facebook API if no rows are found.
+   * Checks cm_earnings_page for complete daily coverage of the requested
+   * earnings range and fetches from Facebook when any day is missing.
    * skipBreakdown=true means no per-post getPostWithInsights calls
    * (avoids 268 × 30s timeout chain).
    */
@@ -33,18 +34,20 @@ export class PageInsightsService extends BaseService {
     until: string
   ): Promise<void> {
     try {
-      const sinceDate = new Date(since);
-      const untilDate = new Date(until);
-
-      // Check if we already have earnings for this window
-      const existing = await earningsRepository.getPageEarningsByPageIdsAndRange(
-        [fbPageId],
-        sinceDate,
-        untilDate
+      const existing = await earningsRepository.getPageEarningsForPerformanceRange(
+        fbPageId,
+        since,
+        until
       );
+      const expectedDays = getExpectedEarningsDayCount(since, until);
+      const coveredDays = new Set(
+        existing
+          .filter((row) => row.end_time && (row.period || "day") === "day")
+          .map((row) => row.end_time?.toISOString().slice(0, 10))
+      ).size;
 
-      if (existing.length > 0) {
-        return; // Already have data — nothing to do
+      if (expectedDays === 0 || coveredDays >= expectedDays) {
+        return; // The complete requested earnings window is already cached.
       }
 
       const connectedPage = await connectedPageRepository.getPageByFbPageId(fbPageId);

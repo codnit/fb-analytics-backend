@@ -8,6 +8,7 @@ import type {
 } from "../types/domain";
 import { PrismaHelpers } from "../utils/prismaHelpers";
 import { validateData } from "../utils/schema";
+import { getEarningsStorageWindow } from "../utils/earnings.helpers";
 
 export class EarningsRepository extends BaseRepository<unknown> {
   protected readonly tableName = "cm_earnings_post";
@@ -85,6 +86,39 @@ export class EarningsRepository extends BaseRepository<unknown> {
         orderBy: [{ end_time: "asc" }, { page_id: "asc" }],
       })
     ) as unknown as CmEarningsPageEntity[];
+  }
+
+  async getPageEarningsByPageIdsAndPerformanceRange(
+    pageIds: string[],
+    since: string | Date,
+    until: string | Date
+  ): Promise<CmEarningsPageEntity[]> {
+    if (pageIds.length === 0) {
+      return [];
+    }
+
+    const { startInclusive, endExclusive } = getEarningsStorageWindow(since, until);
+
+    return PrismaHelpers.normalizeRecords(
+      await this.pageDelegate.findMany({
+        where: {
+          page_id: { in: pageIds },
+          end_time: {
+            gte: startInclusive,
+            lt: endExclusive,
+          },
+        },
+        orderBy: [{ end_time: "asc" }, { page_id: "asc" }],
+      })
+    ) as unknown as CmEarningsPageEntity[];
+  }
+
+  async getPageEarningsForPerformanceRange(
+    pageId: string,
+    since: string | Date,
+    until: string | Date
+  ): Promise<CmEarningsPageEntity[]> {
+    return this.getPageEarningsByPageIdsAndPerformanceRange([pageId], since, until);
   }
 
   async getPageEarningsTotals(pageIds: string[]): Promise<Map<string, number>> {
