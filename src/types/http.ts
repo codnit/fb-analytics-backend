@@ -10,6 +10,7 @@ export interface PaginationMeta {
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
+  code?: string;
   data?: T;
   pagination?: PaginationMeta;
   error?: unknown;
@@ -24,6 +25,15 @@ export type TypedRequest<
 export interface AuthContext<T = unknown> {
   userLongToken?: string;
   pages?: T[];
+  tokenMetadata?: FacebookTokenMetadata;
+}
+
+export interface FacebookTokenMetadata {
+  tokenType?: string | null;
+  isValid?: boolean | null;
+  issuedAt?: number | null;
+  expiresAt?: number | null;
+  dataAccessExpiresAt?: number | null;
 }
 
 export interface AuthenticatedRequest<

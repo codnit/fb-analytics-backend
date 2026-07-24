@@ -7,7 +7,11 @@ export const partnerAuth = (req: Request, res: Response, next: NextFunction): Re
   const authHeader = req.headers.authorization;
 
   if (typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ success: false, message: "Partner authentication required." });
+    return res.status(401).json({
+      success: false,
+      message: "Partner authentication required.",
+      code: "PARTNER_AUTH_REQUIRED",
+    });
   }
 
   try {
@@ -19,7 +23,11 @@ export const partnerAuth = (req: Request, res: Response, next: NextFunction): Re
     (req as any).partnerId = decoded.id;
     return next();
   } catch {
-    return res.status(401).json({ success: false, message: "Invalid or expired partner token." });
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired partner token.",
+      code: "PARTNER_SESSION_EXPIRED",
+    });
   }
 };
 

@@ -1,6 +1,7 @@
 import insightsService from "../insights.service";
 import partnerRepository from "../../repositories/Partner";
 import type { PartnerCreateInput, PartnerEntity } from "../../types/domain";
+import { encryptPageToken as encryptFacebookUserToken } from "../../utils/pageTokenCrypto";
 
 export class PartnerSyncService {
   async syncPartner(accessToken: string, registrationData?: any, partnerId?: string): Promise<PartnerEntity> {
@@ -17,6 +18,7 @@ export class PartnerSyncService {
       website_url: registrationData?.website_url || undefined,
       niche_category: registrationData?.niche_category || undefined,
       reason_joining: registrationData?.reason_joining || undefined,
+      facebook_user_token_encrypted: encryptFacebookUserToken(accessToken),
     };
     
     // Remove undefined values
@@ -24,13 +26,17 @@ export class PartnerSyncService {
 
     if (partnerId) {
       partnerInput.user_id = user.id;
-      return partnerRepository.updatePartner(partnerId, partnerInput);
+      const savedPartner = await partnerRepository.updatePartner(partnerId, partnerInput);
+      const { facebook_user_token_encrypted: _storedToken, ...safePartner } = savedPartner;
+      return safePartner;
     } else {
       const fullInput: PartnerCreateInput = {
         user_id: user.id,
         ...partnerInput
       };
-      return partnerRepository.upsertPartner(fullInput);
+      const savedPartner = await partnerRepository.upsertPartner(fullInput);
+      const { facebook_user_token_encrypted: _storedToken, ...safePartner } = savedPartner;
+      return safePartner;
     }
   }
 }

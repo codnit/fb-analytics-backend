@@ -21,6 +21,7 @@ export class SchemaRegistry {
         name: { type: "text", required: false, default: null },
         email: { type: "text", required: false, default: null },
         company: { type: "text", required: false, default: null },
+        facebook_user_token_encrypted: { type: "text", required: false, default: null },
       },
     },
     connected_pages: {

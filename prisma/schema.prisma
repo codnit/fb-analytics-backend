@@ -20,6 +20,7 @@ model Partner {
   niche_category   String?
   reason_joining   String?
   password_hash    String?
+  facebook_user_token_encrypted String?
   created_at       DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("partners")

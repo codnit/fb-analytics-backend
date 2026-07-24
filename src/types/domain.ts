@@ -26,6 +26,7 @@ export interface PartnerEntity extends BaseEntity {
   niche_category?: string | null;
   reason_joining?: string | null;
   password_hash?: string | null;
+  facebook_user_token_encrypted?: string | null;
   created_at: Date;
 }
 
@@ -132,6 +133,7 @@ export interface PartnerCreateInput {
   niche_category?: string | null;
   reason_joining?: string | null;
   password_hash?: string | null;
+  facebook_user_token_encrypted?: string | null;
 }
 
 export interface ConnectedPageCreateInput {
