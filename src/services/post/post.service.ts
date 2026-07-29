@@ -1,7 +1,7 @@
 import { BaseService } from "../../core/base.service";
 import connectedPageRepository from "../../repositories/ConnectedPage";
 import postRepository from "../../repositories/Post";
-import type { GraphQueryOptions, PostCreateInput, PostEntity } from "../../types/domain";
+import type { GraphQueryOptions, PostContentType, PostCreateInput, PostEntity } from "../../types/domain";
 import type { FacebookPost } from "../../types/facebook";
 import insightsService from "../insights.service";
 import postSyncService from "../facebook/post.sync.service";
@@ -293,7 +293,11 @@ export class PostService extends BaseService {
 
   async getPagePosts(
     pageId: string,
-    options: Pick<GraphQueryOptions, "since" | "until"> & { page: number; limit: number }
+    options: Pick<GraphQueryOptions, "since" | "until"> & {
+      page: number;
+      limit: number;
+      contentType?: PostContentType;
+    }
   ): Promise<{ posts: PostEntity[]; syncStatus: "ready" | "pending"; total: number }> {
     const normalizedSince = normalizeWindowBoundary(options.since, "since");
     const normalizedUntil = normalizeWindowBoundary(options.until, "until");
@@ -335,7 +339,12 @@ export class PostService extends BaseService {
       }
     }
 
-    const { posts, total } = await postRepository.getPagePostsPaginated(pageId, dbOptions, options.page, options.limit);
+    const { posts, total } = await postRepository.getPagePostsPaginated(
+      pageId,
+      { ...dbOptions, contentType: options.contentType },
+      options.page,
+      options.limit
+    );
     void this.queueStaleVisiblePostMetadataRefresh(pageId, posts);
 
     const syncStatus = missingWindows.length > 0 ? "pending" : "ready";

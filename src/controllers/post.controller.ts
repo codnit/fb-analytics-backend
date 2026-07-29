@@ -5,7 +5,10 @@ import postRepository from "../repositories/Post";
 import connectedPageRepository from "../repositories/ConnectedPage";
 import { ResponseFormatter } from "../utils/formatter";
 import { isUuid } from "../utils/uuid";
+import type { PostContentType } from "../types/domain";
 import { decryptPageToken } from "../utils/pageTokenCrypto";
+
+const POST_CONTENT_TYPES = new Set<PostContentType>(["all", "video", "reel", "photo", "link"]);
 
 export class PostController extends BaseController {
   getPostById = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
@@ -84,6 +87,11 @@ export class PostController extends BaseController {
       const { since, until } = req.query as Record<string, string>;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
+      const requestedContentType = String(req.query.contentType || "all").toLowerCase() as PostContentType;
+
+      if (!POST_CONTENT_TYPES.has(requestedContentType)) {
+        return this.badRequest(res, "contentType must be one of: all, video, reel, photo, link");
+      }
 
       let realPageId = pageId;
       if (isUuid(pageId)) {
@@ -96,6 +104,7 @@ export class PostController extends BaseController {
         until,
         page,
         limit,
+        contentType: requestedContentType,
       });
 
       console.log(`[PostController] Page ${page} (${posts.length}/${limit}) for ${realPageId} (${syncStatus})`);

@@ -1,6 +1,6 @@
 import { getDB } from "../config/database";
 import { BaseRepository } from "../core/base.repository";
-import type { GraphQueryOptions, PostCreateInput, PostEntity } from "../types/domain";
+import type { GraphQueryOptions, PostContentType, PostCreateInput, PostEntity } from "../types/domain";
 import { isUuid } from "../utils/uuid";
 
 const normalizeRangeBoundary = (value: string, boundary: "since" | "until"): Date => {
@@ -10,6 +10,54 @@ const normalizeRangeBoundary = (value: string, boundary: "since" | "until"): Dat
   }
 
   return new Date(value);
+};
+
+const insensitiveContains = (value: string) => ({
+  contains: value,
+  mode: "insensitive" as const,
+});
+
+const getContentTypeFilter = (contentType: PostContentType = "all") => {
+  const reelConditions = [
+    { type: insensitiveContains("reel") },
+    { permalink: insensitiveContains("/reel/") },
+    { permalink: insensitiveContains("/reels/") },
+  ];
+
+  switch (contentType) {
+    case "reel":
+      return { OR: reelConditions };
+    case "video":
+      return {
+        AND: [
+          {
+            OR: [
+              { type: insensitiveContains("video") },
+              { permalink: insensitiveContains("/videos/") },
+            ],
+          },
+          { NOT: { OR: reelConditions } },
+        ],
+      };
+    case "photo":
+      return {
+        OR: [
+          { type: insensitiveContains("photo") },
+          { type: insensitiveContains("image") },
+          { permalink: insensitiveContains("/photos/") },
+        ],
+      };
+    case "link":
+      return {
+        OR: [
+          { type: insensitiveContains("link") },
+          { type: insensitiveContains("share") },
+          { permalink: insensitiveContains("/shares/") },
+        ],
+      };
+    default:
+      return {};
+  }
 };
 
 export class PostRepository extends BaseRepository<PostEntity> {
@@ -76,11 +124,11 @@ export class PostRepository extends BaseRepository<PostEntity> {
 
   async getPagePostsPaginated(
     pageId: string,
-    options: { since?: string; until?: string },
+    options: { since?: string; until?: string; contentType?: PostContentType },
     page: number,
     limit: number
   ): Promise<{ posts: PostEntity[]; total: number }> {
-    const { since, until } = options;
+    const { since, until, contentType = "all" } = options;
     const offset = (page - 1) * limit;
 
     const created_time =
@@ -94,6 +142,7 @@ export class PostRepository extends BaseRepository<PostEntity> {
     const where = {
       page_id: pageId,
       ...(created_time ? { created_time } : {}),
+      ...getContentTypeFilter(contentType),
     };
 
     const [posts, total] = await Promise.all([

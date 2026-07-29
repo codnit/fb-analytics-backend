@@ -307,3 +307,5 @@ export interface GraphQueryOptions {
   nextPageUrl?: string;
   breakdown?: string;
 }
+
+export type PostContentType = "all" | "video" | "reel" | "photo" | "link";
