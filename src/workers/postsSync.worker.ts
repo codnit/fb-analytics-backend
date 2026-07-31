@@ -7,6 +7,7 @@ import insightsService from "../services/insights.service";
 import postSyncService, { PostSyncService } from "../services/facebook/post.sync.service";
 import { DEFAULT_POST_FETCH_LIMIT } from "../services/facebookSync.presets";
 import { FacebookPost } from "../types/facebook";
+import { isFacebookTokenError } from "../utils/facebookAuthError";
 
 
 export const pagePostsSyncWorker = new Worker(
@@ -23,17 +24,28 @@ export const pagePostsSyncWorker = new Worker(
         const accessToken = resolveStoredToken(connectedPage?.page_token_encrypted);
 
         if (!accessToken) {
+            if (connectedPage) {
+                await connectedPageRepository.markFacebookReauthRequired(connectedPage.id, "missing_page_token");
+            }
             throw new Error(`No stored token found for page ${pageId}`);
         }
 
         for (const window of missingWindows) {
-            const response = await insightsService.getPagePosts(pageId, {
-                access_token: accessToken,
-                since: window.since,
-                until: window.until,
-                limit: DEFAULT_POST_FETCH_LIMIT,
-                fetchAll: true,
-            });
+            let response;
+            try {
+                response = await insightsService.getPagePosts(pageId, {
+                    access_token: accessToken,
+                    since: window.since,
+                    until: window.until,
+                    limit: DEFAULT_POST_FETCH_LIMIT,
+                    fetchAll: true,
+                });
+            } catch (error) {
+                if (connectedPage && isFacebookTokenError(error)) {
+                    await connectedPageRepository.markFacebookReauthRequired(connectedPage.id);
+                }
+                throw error;
+            }
 
             for (const post of response.data as FacebookPost[]) {
                 if (!post?.id) continue;

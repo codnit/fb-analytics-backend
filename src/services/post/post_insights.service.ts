@@ -9,6 +9,7 @@ import {
   resolveInsightCache,
   resolveStoredToken,
 } from "../../utils/insight-cache.helpers";
+import { isFacebookTokenError } from "../../utils/facebookAuthError";
 
 export class PostInsightsService extends BaseService {
   constructor() {
@@ -17,6 +18,29 @@ export class PostInsightsService extends BaseService {
 
   createPostInsight(insightData: PostInsightCreateInput): Promise<PostInsightEntity> {
     return postInsightsRepository.createPostInsight(insightData);
+  }
+
+  private async markPostPageReconnectRequired(
+    fbPostId: string,
+    error?: unknown,
+    reason = "facebook_page_token_invalid"
+  ): Promise<void> {
+    if (error && !isFacebookTokenError(error)) {
+      return;
+    }
+
+    try {
+      const post = await postRepository.getPostByFbPostId(fbPostId);
+      const connectedPage = post
+        ? await connectedPageRepository.getPageByFbPageId(post.page_id)
+        : null;
+
+      if (connectedPage) {
+        await connectedPageRepository.markFacebookReauthRequired(connectedPage.id, reason);
+      }
+    } catch (statusError) {
+      console.error(`[post-insights] Failed to mark the page for post ${fbPostId} for Facebook reconnection:`, statusError);
+    }
   }
 
   async fetchAndSavePostInsights(
@@ -30,17 +54,23 @@ export class PostInsightsService extends BaseService {
 
     const accessToken = resolveStoredToken(connectedPage?.page_token_encrypted);
     if (!accessToken) {
+      await this.markPostPageReconnectRequired(fbPostId, undefined, "missing_page_token");
       throw new Error(`No access token found for post ${fbPostId}`);
     }
 
-    await postSyncService.syncPostInsights({
-      fbPostId,
-      facebookPostId: fbPostId,
-      accessToken,
-      metrics: DEFAULT_POST_METRICS,
-      since: options.since,
-      until: options.until,
-    });
+    try {
+      await postSyncService.syncPostInsights({
+        fbPostId,
+        facebookPostId: fbPostId,
+        accessToken,
+        metrics: DEFAULT_POST_METRICS,
+        since: options.since,
+        until: options.until,
+      });
+    } catch (error) {
+      await this.markPostPageReconnectRequired(fbPostId, error);
+      throw error;
+    }
   }
 
   async getPostInsights(
@@ -59,14 +89,19 @@ export class PostInsightsService extends BaseService {
         return resolveStoredToken(connectedPage?.page_token_encrypted);
       },
       fetchMissingFromApi: async (postId, accessToken, metrics, window) => {
-        await postSyncService.syncPostInsights({
-          fbPostId: postId,
-          facebookPostId: postId,
-          accessToken,
-          metrics,
-          since: window.since,
-          until: window.until,
-        });
+        try {
+          await postSyncService.syncPostInsights({
+            fbPostId: postId,
+            facebookPostId: postId,
+            accessToken,
+            metrics,
+            since: window.since,
+            until: window.until,
+          });
+        } catch (error) {
+          await this.markPostPageReconnectRequired(postId, error);
+          throw error;
+        }
       },
     });
   }
@@ -89,14 +124,19 @@ export class PostInsightsService extends BaseService {
         return resolveStoredToken(connectedPage?.page_token_encrypted);
       },
       fetchMissingFromApi: async (postId, accessToken, metrics, window) => {
-        await postSyncService.syncPostInsights({
-          fbPostId: postId,
-          facebookPostId: postId,
-          accessToken,
-          metrics,
-          since: window.since,
-          until: window.until,
-        });
+        try {
+          await postSyncService.syncPostInsights({
+            fbPostId: postId,
+            facebookPostId: postId,
+            accessToken,
+            metrics,
+            since: window.since,
+            until: window.until,
+          });
+        } catch (error) {
+          await this.markPostPageReconnectRequired(postId, error);
+          throw error;
+        }
       },
     });
   }

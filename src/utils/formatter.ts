@@ -193,6 +193,9 @@ export class ResponseFormatter {
         fan_count: response.fan_count ? Number(response.fan_count) : 0,
         is_active: response.is_active !== undefined ? response.is_active : true,
         last_synced_at: response.last_synced_at || null,
+        facebook_reauth_required: Boolean(response.facebook_reauth_required),
+        facebook_reauth_required_at: response.facebook_reauth_required_at || null,
+        facebook_reauth_reason: response.facebook_reauth_reason || null,
         latest_sync_completed_at: response.latest_sync_completed_at || null,
       };
     } catch (error) {

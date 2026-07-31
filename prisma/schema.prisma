@@ -8,51 +8,54 @@ datasource db {
 }
 
 model Partner {
-  id               String   @id @default(uuid()) @db.Uuid
-  user_id          String   @unique
-  name             String?
-  email            String?
-  phone            String?
-  country          String?
-  company          String?
-  publisher_type   String?
-  website_url      String?
-  niche_category   String?
-  reason_joining   String?
-  password_hash    String?
+  id                            String   @id @default(uuid()) @db.Uuid
+  user_id                       String   @unique
+  name                          String?
+  email                         String?
+  phone                         String?
+  country                       String?
+  company                       String?
+  publisher_type                String?
+  website_url                   String?
+  niche_category                String?
+  reason_joining                String?
+  password_hash                 String?
   facebook_user_token_encrypted String?
-  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  created_at                    DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("partners")
 }
 
 model ConnectedPage {
-  id                  String   @id @default(uuid()) @db.Uuid
-  partner_id          String   @db.Uuid
-  fb_page_id          String
-  page_name           String?
-  page_token_encrypted String?
-  publishing_enabled   Boolean  @default(false)
-  publishing_granted_at DateTime? @db.Timestamptz(6)
-  publishing_granted_by String?
-  facebook_permissions Json?
-  permissions_checked_at DateTime? @db.Timestamptz(6)
-  picture_url          String?
-  category             String?
-  fan_count           BigInt   @default(0)
-  is_active           Boolean  @default(true)
-  last_synced_at      DateTime? @db.Timestamptz(6)
-  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  id                          String    @id @default(uuid()) @db.Uuid
+  partner_id                  String    @db.Uuid
+  fb_page_id                  String
+  page_name                   String?
+  page_token_encrypted        String?
+  publishing_enabled          Boolean   @default(false)
+  publishing_granted_at       DateTime? @db.Timestamptz(6)
+  publishing_granted_by       String?
+  facebook_permissions        Json?
+  permissions_checked_at      DateTime? @db.Timestamptz(6)
+  picture_url                 String?
+  category                    String?
+  fan_count                   BigInt    @default(0)
+  is_active                   Boolean   @default(true)
+  last_synced_at              DateTime? @db.Timestamptz(6)
+  facebook_reauth_required    Boolean   @default(false)
+  facebook_reauth_required_at DateTime? @db.Timestamptz(6)
+  facebook_reauth_reason      String?
+  created_at                  DateTime  @default(now()) @db.Timestamptz(6)
 
+  @@unique([partner_id, fb_page_id])
   @@index([partner_id])
   @@index([fb_page_id])
-  @@unique([partner_id, fb_page_id])
   @@map("connected_pages")
 }
 
 model PublishingPost {
-  id                     String   @id @default(uuid()) @db.Uuid
-  page_id                String   @db.Uuid
+  id                     String    @id @default(uuid()) @db.Uuid
+  page_id                String    @db.Uuid
   fb_page_id             String
   fb_post_id             String?
   permalink              String?
@@ -62,16 +65,16 @@ model PublishingPost {
   media_url              String?
   media_object_key       String?
   scheduled_publish_time DateTime? @db.Timestamptz(6)
-  status                 String   @default("pending")
+  status                 String    @default("pending")
   graph_response         Json?
   error_message          String?
-  attempt_count          Int      @default(0)
+  attempt_count          Int       @default(0)
   last_attempt_at        DateTime? @db.Timestamptz(6)
   next_retry_at          DateTime? @db.Timestamptz(6)
   created_by             String?
-  created_via            String   @default("api")
-  created_at             DateTime @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime @updatedAt @db.Timestamptz(6)
+  created_via            String    @default("api")
+  created_at             DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime  @updatedAt @db.Timestamptz(6)
 
   @@index([page_id])
   @@index([fb_page_id])
@@ -81,18 +84,18 @@ model PublishingPost {
 }
 
 model Notification {
-  id                    String   @id @default(uuid()) @db.Uuid
-  recipient_partner_id  String   @db.Uuid
-  connected_page_id     String   @db.Uuid
-  publishing_post_id    String   @db.Uuid
-  type                  String   @default("facebook_post_published")
-  title                 String
-  message               String?
-  page_name             String?
-  post_url              String?
-  is_read               Boolean  @default(false)
-  read_at               DateTime? @db.Timestamptz(6)
-  created_at            DateTime @default(now()) @db.Timestamptz(6)
+  id                   String    @id @default(uuid()) @db.Uuid
+  recipient_partner_id String    @db.Uuid
+  connected_page_id    String    @db.Uuid
+  publishing_post_id   String    @db.Uuid
+  type                 String    @default("facebook_post_published")
+  title                String
+  message              String?
+  page_name            String?
+  post_url             String?
+  is_read              Boolean   @default(false)
+  read_at              DateTime? @db.Timestamptz(6)
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
 
   @@unique([recipient_partner_id, publishing_post_id, type])
   @@index([recipient_partner_id, is_read, created_at])
@@ -101,32 +104,32 @@ model Notification {
 }
 
 model Post {
-  id            String   @id @default(uuid()) @db.Uuid
-  page_id       String
-  fb_post_id    String
-  message       String?
-  type          String?
-  full_picture  String?
-  comments_count Int      @default(0)
-  shares_count   Int      @default(0)
-  permalink     String?
-  created_time  DateTime? @db.Timestamptz(6)
-  synced_at     DateTime @default(now()) @db.Timestamptz(6)
+  id             String    @id @default(uuid()) @db.Uuid
+  page_id        String
+  fb_post_id     String
+  message        String?
+  type           String?
+  full_picture   String?
+  comments_count Int       @default(0)
+  shares_count   Int       @default(0)
+  permalink      String?
+  created_time   DateTime? @db.Timestamptz(6)
+  synced_at      DateTime  @default(now()) @db.Timestamptz(6)
 
+  @@unique([page_id, fb_post_id])
   @@index([page_id])
   @@index([fb_post_id])
-  @@unique([page_id, fb_post_id])
   @@map("posts")
 }
 
 model PageInsight {
-  id            String   @id @default(uuid()) @db.Uuid
-  page_id       String
-  metric_name   String
-  metric_value  Json?
-  period        String?
-  end_time      DateTime? @db.Timestamptz(6)
-  synced_at     DateTime @default(now()) @db.Timestamptz(6)
+  id           String    @id @default(uuid()) @db.Uuid
+  page_id      String
+  metric_name  String
+  metric_value Json?
+  period       String?
+  end_time     DateTime? @db.Timestamptz(6)
+  synced_at    DateTime  @default(now()) @db.Timestamptz(6)
 
   @@index([page_id])
   @@index([page_id, metric_name])
@@ -136,13 +139,13 @@ model PageInsight {
 }
 
 model PostInsight {
-  id            String   @id @default(uuid()) @db.Uuid
-  post_id       String
-  metric_name   String
-  metric_value  Json?
-  period        String?
-  end_time      DateTime? @db.Timestamptz(6)
-  synced_at     DateTime @default(now()) @db.Timestamptz(6)
+  id           String    @id @default(uuid()) @db.Uuid
+  post_id      String
+  metric_name  String
+  metric_value Json?
+  period       String?
+  end_time     DateTime? @db.Timestamptz(6)
+  synced_at    DateTime  @default(now()) @db.Timestamptz(6)
 
   @@index([post_id])
   @@index([post_id, metric_name])
@@ -152,14 +155,14 @@ model PostInsight {
 }
 
 model CmEarningsPost {
-  id                   String   @id @default(uuid()) @db.Uuid
+  id                   String    @id @default(uuid()) @db.Uuid
   post_id              String
-  earnings_amount      Decimal  @default(0)
-  approximate_earnings Decimal  @default(0)
-  currency             String   @default("USD")
+  earnings_amount      Decimal   @default(0)
+  approximate_earnings Decimal   @default(0)
+  currency             String    @default("USD")
   period               String?
   end_time             DateTime? @db.Timestamptz(6)
-  synced_at            DateTime @default(now()) @db.Timestamptz(6)
+  synced_at            DateTime  @default(now()) @db.Timestamptz(6)
 
   @@index([post_id])
   @@index([post_id, period, end_time])
@@ -167,15 +170,15 @@ model CmEarningsPost {
 }
 
 model CmEarningsPage {
-  id                   String   @id @default(uuid()) @db.Uuid
-  page_id              String
-  earnings_amount      Decimal  @default(0)
-  approximate_earnings Decimal  @default(0)
+  id                     String    @id @default(uuid()) @db.Uuid
+  page_id                String
+  earnings_amount        Decimal   @default(0)
+  approximate_earnings   Decimal   @default(0)
   content_type_breakdown Json?
-  currency             String   @default("USD")
-  period               String?
-  end_time             DateTime? @db.Timestamptz(6)
-  synced_at            DateTime @default(now()) @db.Timestamptz(6)
+  currency               String    @default("USD")
+  period                 String?
+  end_time               DateTime? @db.Timestamptz(6)
+  synced_at              DateTime  @default(now()) @db.Timestamptz(6)
 
   @@index([page_id])
   @@index([page_id, period, end_time])
@@ -183,12 +186,12 @@ model CmEarningsPage {
 }
 
 model ThirdPartyData {
-  id         String   @id @default(uuid()) @db.Uuid
-  page_id    String?  @db.Uuid
-  post_id    String?  @db.Uuid
-  data_type  String
-  value      Json?
-  synced_at  DateTime @default(now()) @db.Timestamptz(6)
+  id        String   @id @default(uuid()) @db.Uuid
+  page_id   String?  @db.Uuid
+  post_id   String?  @db.Uuid
+  data_type String
+  value     Json?
+  synced_at DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([page_id])
   @@index([post_id])
@@ -197,14 +200,14 @@ model ThirdPartyData {
 }
 
 model SyncJob {
-  id           String   @id @default(uuid()) @db.Uuid
-  page_id      String   @db.Uuid
+  id           String    @id @default(uuid()) @db.Uuid
+  page_id      String    @db.Uuid
   job_type     String
-  status       String   @default("pending")
+  status       String    @default("pending")
   started_at   DateTime? @db.Timestamptz(6)
   completed_at DateTime? @db.Timestamptz(6)
   error_log    String?
-  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
 
   @@index([page_id])
   @@index([page_id, job_type])

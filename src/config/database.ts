@@ -101,6 +101,15 @@ class DatabaseConnection {
     await this.prisma.$executeRawUnsafe(
       'ALTER TABLE "connected_pages" ADD COLUMN IF NOT EXISTS "permissions_checked_at" TIMESTAMPTZ(6)'
     );
+    await this.prisma.$executeRawUnsafe(
+      'ALTER TABLE "connected_pages" ADD COLUMN IF NOT EXISTS "facebook_reauth_required" BOOLEAN NOT NULL DEFAULT false'
+    );
+    await this.prisma.$executeRawUnsafe(
+      'ALTER TABLE "connected_pages" ADD COLUMN IF NOT EXISTS "facebook_reauth_required_at" TIMESTAMPTZ(6)'
+    );
+    await this.prisma.$executeRawUnsafe(
+      'ALTER TABLE "connected_pages" ADD COLUMN IF NOT EXISTS "facebook_reauth_reason" TEXT'
+    );
     await this.prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "publishing_posts" (
         "id" UUID NOT NULL DEFAULT gen_random_uuid(),

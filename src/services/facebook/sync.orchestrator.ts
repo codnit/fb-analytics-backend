@@ -23,6 +23,8 @@ import {
   DEFAULT_SYNC_WINDOW_DAYS,
 } from "../facebookSync.presets";
 import { mapLimit } from "../../utils/pLimits";
+import connectedPageRepository from "../../repositories/ConnectedPage";
+import { isFacebookTokenError } from "../../utils/facebookAuthError";
 
 const normalizeGrantedScopes = (value: unknown): string[] => {
   if (Array.isArray(value)) {
@@ -48,6 +50,7 @@ export class FacebookSyncOrchestrator extends BaseService {
   ): Promise<InitialConnectionSyncResult> {
     return this.run("initialConnectionSync", async () => {
       const partner = await partnerSyncService.syncPartner(accessToken, registrationData, partnerId);
+      const facebookValidationStartedAt = new Date();
       const pagesResponse = await insightsService.getUserPages({ access_token: accessToken });
       const enablePublishing = registrationData?.enablePublishing === true;
       const publishingOnly = enablePublishing && registrationData?.publishingOnly === true;
@@ -59,6 +62,12 @@ export class FacebookSyncOrchestrator extends BaseService {
         (pagesResponse.data as FacebookPage[]).map(async (fbPage) => {
           if (!fbPage?.id) return;
           try {
+            await connectedPageRepository.clearFacebookReauthRequiredByFbPageId(
+              fbPage.id,
+              partner.id,
+              facebookValidationStartedAt
+            );
+
             if (enablePublishing) {
               await pageSyncService.syncPage({
                 partner_id: partner.id,
@@ -118,6 +127,7 @@ export class FacebookSyncOrchestrator extends BaseService {
       const accessToken = fbPage.access_token || payload.accessToken;
       const syncUntil = new Date().toISOString();
       const since = this.getWindowStart(payload.syncWindowDays ?? DEFAULT_SYNC_WINDOW_DAYS);
+      const syncStartedAt = new Date();
       let syncJob: SyncJobEntity | null = null;
 
       console.log(`[facebook-sync] 🚀 Starting sync for page: ${fbPage.name || fbPage.id}`);
@@ -214,6 +224,7 @@ export class FacebookSyncOrchestrator extends BaseService {
           pageSyncService.syncPageCMEarningsForWindow(fbPage.id, accessToken, since, syncUntil, postsCollected),
         ]);
 
+        await connectedPageRepository.clearFacebookReauthRequired(syncedPage.id, syncStartedAt);
         await syncJobService.updateSyncJob(syncJob.id, "completed");
 
         console.log(
@@ -230,6 +241,16 @@ export class FacebookSyncOrchestrator extends BaseService {
         };
       } catch (error) {
         console.error(`[facebook-sync] ❌ Error syncing page ${fbPage.id}:`, error);
+        if (isFacebookTokenError(error)) {
+          try {
+            await connectedPageRepository.markFacebookReauthRequiredByFbPageId(
+              fbPage.id,
+              payload.partnerId
+            );
+          } catch (statusError) {
+            console.error(`[facebook-sync] Failed to mark page ${fbPage.id} for Facebook reconnection:`, statusError);
+          }
+        }
         if (syncJob) {
           await syncJobService.updateSyncJob(
             syncJob.id,
@@ -276,6 +297,13 @@ export class FacebookSyncOrchestrator extends BaseService {
         return { post, insightsSaved: insights.length };
       } catch (error) {
         console.error(`[facebook-sync] ❌ Error syncing post ${payload.fbPostId}:`, error);
+        if (isFacebookTokenError(error)) {
+          try {
+            await connectedPageRepository.markFacebookReauthRequired(payload.pageId);
+          } catch (statusError) {
+            console.error(`[facebook-sync] Failed to mark page ${payload.pageId} for Facebook reconnection:`, statusError);
+          }
+        }
         await syncJobService.updateSyncJob(
           syncJob.id,
           "failed",

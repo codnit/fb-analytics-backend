@@ -29,6 +29,7 @@ import {
   DEFAULT_PAGE_METRICS,
   DEFAULT_POST_METRICS,
 } from "../../services/facebookSync.presets";
+import { isFacebookTokenError } from "../../utils/facebookAuthError";
 
 class IncrementalSyncTask extends BaseSyncTask {
   protected readonly taskName = "incremental-sync";
@@ -52,12 +53,14 @@ class IncrementalSyncTask extends BaseSyncTask {
 
     for (const page of pages) {
       const syncJob = await syncJobService.createSyncJob(page.id, "cron_incremental_sync");
+      const syncStartedAt = new Date();
 
       try {
         await syncJobService.updateSyncJob(syncJob.id, "running");
 
         if (!page.page_token_encrypted) {
           this.warn(`No token for page ${page.fb_page_id}, skipping`);
+          await pageRepository.markFacebookReauthRequired(page.id, "missing_page_token");
           await syncJobService.updateSyncJob(syncJob.id, "failed", "No page token stored");
           pagesFailed++;
           continue;
@@ -79,6 +82,9 @@ class IncrementalSyncTask extends BaseSyncTask {
             page_token_encrypted: accessToken, // Will be re-encrypted
           });
         } catch (metaErr) {
+          if (isFacebookTokenError(metaErr)) {
+            throw metaErr;
+          }
           this.warn(`Failed to refresh metadata for page ${page.fb_page_id}: ${metaErr instanceof Error ? metaErr.message : String(metaErr)}`);
         }
 
@@ -176,17 +182,28 @@ class IncrementalSyncTask extends BaseSyncTask {
               earningsPostAppended += saved;
             }
           } catch (postErr) {
+            if (isFacebookTokenError(postErr)) {
+              throw postErr;
+            }
             this.warn(`Failed incremental sync for post ${post.fb_post_id}`, {
               error: postErr instanceof Error ? postErr.message : String(postErr),
             });
           }
         }
 
+        await pageRepository.clearFacebookReauthRequired(page.id, syncStartedAt);
         await syncJobService.updateSyncJob(syncJob.id, "completed");
         pagesSucceeded++;
         this.log(`✅ Page ${page.fb_page_id} incremental-synced`);
       } catch (err) {
         this.error(`Failed incremental sync for page ${page.fb_page_id}`, err);
+        if (isFacebookTokenError(err)) {
+          try {
+            await pageRepository.markFacebookReauthRequired(page.id);
+          } catch (statusError) {
+            this.error(`Failed to mark page ${page.fb_page_id} for Facebook reconnection`, statusError);
+          }
+        }
         await syncJobService.updateSyncJob(
           syncJob.id,
           "failed",

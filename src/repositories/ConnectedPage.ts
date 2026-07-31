@@ -63,6 +63,96 @@ export class ConnectedPageRepository extends BaseRepository<ConnectedPageEntity>
     return this.updateRecord({ id: pageId }, updates);
   }
 
+  async markFacebookReauthRequired(
+    pageId: string,
+    reason = "facebook_page_token_invalid"
+  ): Promise<ConnectedPageEntity> {
+    return this.delegate.update({
+      where: { id: pageId },
+      data: {
+        facebook_reauth_required: true,
+        facebook_reauth_required_at: new Date(),
+        facebook_reauth_reason: reason,
+      },
+    });
+  }
+
+  async markFacebookReauthRequiredByFbPageId(
+    fbPageId: string,
+    partnerId: string,
+    reason = "facebook_page_token_invalid"
+  ): Promise<number> {
+    const result = await this.delegate.updateMany({
+      where: {
+        fb_page_id: fbPageId,
+        partner_id: partnerId,
+      },
+      data: {
+        facebook_reauth_required: true,
+        facebook_reauth_required_at: new Date(),
+        facebook_reauth_reason: reason,
+      },
+    });
+
+    return result.count;
+  }
+
+  async clearFacebookReauthRequired(
+    pageId: string,
+    syncStartedAt?: Date
+  ): Promise<number> {
+    const result = await this.delegate.updateMany({
+      where: {
+        id: pageId,
+        facebook_reauth_required: true,
+        ...(syncStartedAt
+          ? {
+            OR: [
+              { facebook_reauth_required_at: null },
+              { facebook_reauth_required_at: { lte: syncStartedAt } },
+            ],
+          }
+          : {}),
+      },
+      data: {
+        facebook_reauth_required: false,
+        facebook_reauth_required_at: null,
+        facebook_reauth_reason: null,
+      },
+    });
+
+    return result.count;
+  }
+
+  async clearFacebookReauthRequiredByFbPageId(
+    fbPageId: string,
+    partnerId: string,
+    validationStartedAt?: Date
+  ): Promise<number> {
+    const result = await this.delegate.updateMany({
+      where: {
+        fb_page_id: fbPageId,
+        partner_id: partnerId,
+        facebook_reauth_required: true,
+        ...(validationStartedAt
+          ? {
+            OR: [
+              { facebook_reauth_required_at: null },
+              { facebook_reauth_required_at: { lte: validationStartedAt } },
+            ],
+          }
+          : {}),
+      },
+      data: {
+        facebook_reauth_required: false,
+        facebook_reauth_required_at: null,
+        facebook_reauth_reason: null,
+      },
+    });
+
+    return result.count;
+  }
+
   async updatePublishingForFbPage(
     fbPageId: string,
     updates: Pick<
@@ -98,6 +188,9 @@ export class ConnectedPageRepository extends BaseRepository<ConnectedPageEntity>
       fan_count: normalizeFanCount(pageData.fan_count),
       is_active: pageData.is_active ?? true,
       last_synced_at: pageData.last_synced_at ?? null,
+      facebook_reauth_required: pageData.facebook_reauth_required ?? false,
+      facebook_reauth_required_at: pageData.facebook_reauth_required_at ?? null,
+      facebook_reauth_reason: pageData.facebook_reauth_reason ?? null,
     };
 
     const updateData = {
@@ -115,6 +208,15 @@ export class ConnectedPageRepository extends BaseRepository<ConnectedPageEntity>
       fan_count: normalizeFanCount(pageData.fan_count),
       is_active: pageData.is_active ?? true,
       last_synced_at: pageData.last_synced_at ?? null,
+      ...(pageData.facebook_reauth_required !== undefined
+        ? { facebook_reauth_required: pageData.facebook_reauth_required }
+        : {}),
+      ...(pageData.facebook_reauth_required_at !== undefined
+        ? { facebook_reauth_required_at: pageData.facebook_reauth_required_at }
+        : {}),
+      ...(pageData.facebook_reauth_reason !== undefined
+        ? { facebook_reauth_reason: pageData.facebook_reauth_reason }
+        : {}),
     };
 
     return getDB().connectedPage.upsert({

@@ -11,6 +11,7 @@ import {
   resolveStoredToken,
 } from "../../utils/insight-cache.helpers";
 import { getExpectedEarningsDayCount } from "../../utils/earnings.helpers";
+import { isFacebookTokenError } from "../../utils/facebookAuthError";
 
 export class PageInsightsService extends BaseService {
   constructor() {
@@ -19,6 +20,25 @@ export class PageInsightsService extends BaseService {
 
   createPageInsight(insightData: PageInsightCreateInput): Promise<PageInsightEntity> {
     return pageInsightsRepository.createPageInsight(insightData);
+  }
+
+  private async markPageReconnectRequired(
+    fbPageId: string,
+    error?: unknown,
+    reason = "facebook_page_token_invalid"
+  ): Promise<void> {
+    if (error && !isFacebookTokenError(error)) {
+      return;
+    }
+
+    try {
+      const connectedPage = await connectedPageRepository.getPageByFbPageId(fbPageId);
+      if (connectedPage) {
+        await connectedPageRepository.markFacebookReauthRequired(connectedPage.id, reason);
+      }
+    } catch (statusError) {
+      console.error(`[page-insights] Failed to mark ${fbPageId} for Facebook reconnection:`, statusError);
+    }
   }
 
   /**
@@ -54,6 +74,9 @@ export class PageInsightsService extends BaseService {
       const accessToken = resolveStoredToken(connectedPage?.page_token_encrypted);
 
       if (!accessToken) {
+        if (connectedPage) {
+          await this.markPageReconnectRequired(fbPageId, undefined, "missing_page_token");
+        }
         console.warn(`[page-earnings] No stored token for ${fbPageId}, cannot sync earnings`);
         return;
       }
@@ -69,6 +92,7 @@ export class PageInsightsService extends BaseService {
         []
       );
     } catch (error) {
+      await this.markPageReconnectRequired(fbPageId, error);
       // Non-fatal: log and continue so the controller can still return cached insights
       console.warn(
         `[page-earnings] Could not ensure earnings for ${fbPageId}:`,
@@ -92,25 +116,30 @@ export class PageInsightsService extends BaseService {
         return resolveStoredToken(connectedPage?.page_token_encrypted);
       },
       fetchMissingFromApi: async (pageId, accessToken, metrics, window) => {
-        // Sync page insights metrics (impressions, fans, etc.)
-        await pageSyncService.syncPageInsights({
-          pageId,
-          facebookPageId: pageId,
-          accessToken,
-          metrics,
-          period: "day",
-          since: window.since,
-          until: window.until,
-        });
+        try {
+          // Sync page insights metrics (impressions, fans, etc.)
+          await pageSyncService.syncPageInsights({
+            pageId,
+            facebookPageId: pageId,
+            accessToken,
+            metrics,
+            period: "day",
+            since: window.since,
+            until: window.until,
+          });
 
-        // Also sync page earnings for the missing window
-        await pageSyncService.syncPageCMEarningsForWindow(
-          pageId,
-          accessToken,
-          window.since,
-          window.until,
-          []
-        );
+          // Also sync page earnings for the missing window
+          await pageSyncService.syncPageCMEarningsForWindow(
+            pageId,
+            accessToken,
+            window.since,
+            window.until,
+            []
+          );
+        } catch (error) {
+          await this.markPageReconnectRequired(pageId, error);
+          throw error;
+        }
       },
     });
   }
@@ -132,15 +161,20 @@ export class PageInsightsService extends BaseService {
         return resolveStoredToken(connectedPage?.page_token_encrypted);
       },
       fetchMissingFromApi: async (pageId, accessToken, metrics, window) => {
-        await pageSyncService.syncPageInsights({
-          pageId,
-          facebookPageId: pageId,
-          accessToken,
-          metrics,
-          period: "day",
-          since: window.since,
-          until: window.until,
-        });
+        try {
+          await pageSyncService.syncPageInsights({
+            pageId,
+            facebookPageId: pageId,
+            accessToken,
+            metrics,
+            period: "day",
+            since: window.since,
+            until: window.until,
+          });
+        } catch (error) {
+          await this.markPageReconnectRequired(pageId, error);
+          throw error;
+        }
       },
     });
   }

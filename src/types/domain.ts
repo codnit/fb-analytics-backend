@@ -45,6 +45,9 @@ export interface ConnectedPageEntity extends BaseEntity {
   fan_count: bigint | number | string;
   is_active: boolean;
   last_synced_at?: Date | null;
+  facebook_reauth_required?: boolean;
+  facebook_reauth_required_at?: Date | null;
+  facebook_reauth_reason?: string | null;
   latest_sync_completed_at?: Date | null;
   created_at: Date;
 }
@@ -151,6 +154,9 @@ export interface ConnectedPageCreateInput {
   fan_count?: bigint | number | string;
   is_active?: boolean;
   last_synced_at?: Date | null;
+  facebook_reauth_required?: boolean;
+  facebook_reauth_required_at?: Date | null;
+  facebook_reauth_reason?: string | null;
 }
 
 export interface PostCreateInput {

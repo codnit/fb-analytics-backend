@@ -65,7 +65,7 @@ export type DailyEarningsRow = {
   currency: string;
 };
 
-export type ContentTypeBreakdownKey = "video" | "photo" | "link" | "text" | "other" | "reel" | "story" | "extra_bonus";
+export type ContentTypeBreakdownKey = "video" | "photo" | "link" | "text" | "other" | "reel" | "story" | "live" | "extra_bonus";
 
 export type ContentTypeBreakdown = Record<
   ContentTypeBreakdownKey,
@@ -84,6 +84,7 @@ export const createEmptyContentTypeBreakdown = (): ContentTypeBreakdown => ({
   other: { earnings_amount: 0, approximate_earnings: 0, post_count: 0 },
   reel: { earnings_amount: 0, approximate_earnings: 0, post_count: 0 },
   story: { earnings_amount: 0, approximate_earnings: 0, post_count: 0 },
+  live: { earnings_amount: 0, approximate_earnings: 0, post_count: 0 },
   extra_bonus: { earnings_amount: 0, approximate_earnings: 0, post_count: 0 },
 });
 
@@ -220,6 +221,8 @@ export const getContentTypeFromEarningSource = (source: string): ContentTypeBrea
       return "video";
     case "story":
       return "story";
+    case "live":
+      return "live";
     case "reel":
     case "reels":
       return "reel";

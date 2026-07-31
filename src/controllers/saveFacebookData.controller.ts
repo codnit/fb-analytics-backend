@@ -153,6 +153,8 @@ export class SaveFacebookDataController extends BaseController {
   };
 
   syncStoredPageAsAdmin = async (req: Request, res: Response): Promise<Response | void> => {
+    let reconnectPageId: string | null = null;
+
     try {
       const { partnerId, pageId } = req.params as { partnerId?: string; pageId?: string };
 
@@ -173,12 +175,22 @@ export class SaveFacebookDataController extends BaseController {
       if (!connectedPage) {
         return this.notFound(res, "Page not found for this partner");
       }
+      reconnectPageId = connectedPage.id;
 
       const pageAccessToken = resolveStoredToken(connectedPage.page_token_encrypted);
       if (!pageAccessToken) {
-        return this.badRequest(res, "Stored Page access token is not available");
+        await connectedPageRepository.markFacebookReauthRequired(
+          connectedPage.id,
+          "missing_page_token"
+        );
+        return res.status(409).json({
+          success: false,
+          message: "The stored Page authorization is not available. The partner must reconnect Facebook.",
+          code: "PAGE_REAUTH_REQUIRED",
+        });
       }
 
+      const facebookValidationStartedAt = new Date();
       const pageDetailsResponse = await insightsService.getPageDetails(
         connectedPage.fb_page_id,
         { access_token: pageAccessToken }
@@ -190,6 +202,10 @@ export class SaveFacebookDataController extends BaseController {
       }
 
       fbPage.access_token = pageAccessToken;
+      await connectedPageRepository.clearFacebookReauthRequired(
+        connectedPage.id,
+        facebookValidationStartedAt
+      );
 
       const job = await facebookSyncQueue.enqueuePageSync({
         partnerId: connectedPage.partner_id,
@@ -214,6 +230,13 @@ export class SaveFacebookDataController extends BaseController {
       );
     } catch (error) {
       if (isFacebookTokenError(error)) {
+        if (reconnectPageId) {
+          try {
+            await connectedPageRepository.markFacebookReauthRequired(reconnectPageId);
+          } catch (statusError) {
+            console.error(`Failed to mark page ${reconnectPageId} for Facebook reconnection:`, statusError);
+          }
+        }
         return res.status(409).json({
           success: false,
           message: "The stored Page authorization has expired or is no longer valid. The partner must reconnect Facebook.",
