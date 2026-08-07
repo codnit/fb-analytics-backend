@@ -10,6 +10,10 @@ class StorageService {
     this.init();
   }
 
+  isConfigured(): boolean {
+    return this.s3Client !== null;
+  }
+
   private init() {
     const accountId = Environment.r2AccountId;
     const accessKeyId = Environment.r2AccessKeyId;

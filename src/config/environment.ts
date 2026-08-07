@@ -52,6 +52,10 @@ export class Environment {
     return `${this.fbAppId}|${this.fbAppSecret}`;
   }
 
+  static get publicApiBaseUrl(): string | undefined {
+    return process.env.PUBLIC_API_BASE_URL?.replace(/\/+$/, "");
+  }
+
   static get pageTokenEncryptionSecret(): string | undefined {
     return process.env.PAGE_TOKEN_ENCRYPTION_SECRET || process.env.TOKEN_ENCRYPTION_SECRET || process.env.FB_APP_SECRET;
   }

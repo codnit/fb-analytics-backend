@@ -21,6 +21,7 @@ import apiKeyAuth from "./middleware/apiKeyAuth";
 import { apiTelemetryMiddleware } from "./middleware/apiTelemetry";
 import monitorRoutes from "./routes/monitor.routes";
 import notificationRoutes from "./routes/notification.routes";
+import facebookDataDeletionRoutes from "./routes/facebookDataDeletion.routes";
 
 const app = express();
 const corsOrigin = Environment.corsOrigin === "*" ? true : Environment.corsOrigin;
@@ -76,6 +77,7 @@ app.use(`${Environment.apiPrefix}/partners`, partnerRoutes);
 app.use(`${Environment.apiPrefix}/pages`, pageRoutes);
 app.use(`${Environment.apiPrefix}/posts`, postRoutes);
 app.use(`${Environment.apiPrefix}/facebook/connect`, saveFacebookDataRoutes);
+app.use(`${Environment.apiPrefix}/facebook/data-deletion`, facebookDataDeletionRoutes);
 app.use(`${Environment.apiPrefix}/revenue-export`, apiKeyAuth, revenueExportRoutes);
 app.use(`${Environment.apiPrefix}/publishing`, publishingRoutes);
 app.use(`${Environment.apiPrefix}/notifications`, notificationRoutes);

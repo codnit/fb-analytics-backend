@@ -25,6 +25,7 @@ import {
 import { mapLimit } from "../../utils/pLimits";
 import connectedPageRepository from "../../repositories/ConnectedPage";
 import { isFacebookTokenError } from "../../utils/facebookAuthError";
+import partnerRepository from "../../repositories/Partner";
 
 const normalizeGrantedScopes = (value: unknown): string[] => {
   if (Array.isArray(value)) {
@@ -123,6 +124,11 @@ export class FacebookSyncOrchestrator extends BaseService {
 
   async processPageSyncJob(payload: PageSyncJobPayload): Promise<PageSyncJobResult> {
     return this.run("processPageSyncJob", async () => {
+      const partner = await partnerRepository.getPartnerById(payload.partnerId);
+      if (!partner || partner.facebook_data_deleted_at) {
+        throw new Error("Facebook sync stopped because this partner's Facebook data was deleted");
+      }
+
       const fbPage = payload.facebookPage;
       const accessToken = fbPage.access_token || payload.accessToken;
       const syncUntil = new Date().toISOString();
@@ -265,6 +271,11 @@ export class FacebookSyncOrchestrator extends BaseService {
 
   async processPostSyncJob(payload: PostSyncJobPayload): Promise<PostSyncJobResult> {
     return this.run("processPostSyncJob", async () => {
+      const connectedPage = await connectedPageRepository.getPageById(payload.pageId);
+      if (!connectedPage?.is_active) {
+        throw new Error("Facebook post sync stopped because the connected Page is no longer active");
+      }
+
       const syncJob = await syncJobService.createSyncJob(payload.pageId, "post_sync");
       const syncUntil = new Date().toISOString();
       const since = this.getWindowStart(DEFAULT_SYNC_WINDOW_DAYS);

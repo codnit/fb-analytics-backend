@@ -19,6 +19,7 @@ export class PartnerSyncService {
       niche_category: registrationData?.niche_category || undefined,
       reason_joining: registrationData?.reason_joining || undefined,
       facebook_user_token_encrypted: encryptFacebookUserToken(accessToken),
+      facebook_data_deleted_at: null,
     };
     
     // Remove undefined values

@@ -48,7 +48,7 @@ export class ConnectedPageRepository extends BaseRepository<ConnectedPageEntity>
 
   getPartnerPages(partnerId: string): Promise<ConnectedPageEntity[]> {
     return this.findManyRecords({
-      where: { partner_id: partnerId },
+      where: { partner_id: partnerId, is_active: true },
     });
   }
 

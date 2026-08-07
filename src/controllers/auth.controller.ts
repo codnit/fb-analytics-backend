@@ -63,6 +63,14 @@ export class AuthController extends BaseController {
         return this.fail(res, "Invalid credentials", 401);
       }
 
+      if (partner.facebook_data_deleted_at) {
+        return res.status(401).json({
+          success: false,
+          message: "This partner account is being deleted.",
+          code: "PARTNER_ACCOUNT_DELETED",
+        });
+      }
+
       const isMatch = await bcrypt.compare(password, partner.password_hash);
       if (!isMatch) {
         return this.fail(res, "Invalid credentials", 401);
@@ -140,8 +148,12 @@ export class AuthController extends BaseController {
       const decoded = jwt.verify(token, JWT_SECRET) as { id: string, role: string };
       
       const partner = await partnerRepository.getPartnerById(decoded.id);
-      if (!partner) {
-        return this.fail(res, "Partner not found", 404);
+      if (!partner || partner.facebook_data_deleted_at) {
+        return res.status(401).json({
+          success: false,
+          message: "This partner account has been deleted or is being deleted.",
+          code: "PARTNER_ACCOUNT_DELETED",
+        });
       }
       
       return this.ok(res, { partner }, "Fetched profile");

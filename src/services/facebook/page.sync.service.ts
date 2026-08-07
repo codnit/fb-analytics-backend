@@ -22,6 +22,7 @@ import { DEFAULT_PAGE_METRICS } from "../facebookSync.presets";
 import { encryptPageToken } from "../../utils/pageTokenCrypto";
 import axios from "axios";
 import { Environment } from "../../config/environment";
+import partnerRepository from "../../repositories/Partner";
 
 const normalizePermissions = (debugData: any): string[] => {
   const scopes = Array.isArray(debugData?.scopes) ? debugData.scopes : [];
@@ -48,6 +49,7 @@ export class PageSyncService {
     category?: string | null;
     last_synced_at?: Date | null;
   }): Promise<ConnectedPageEntity> {
+    await this.assertPartnerCanSync(pageData.partner_id);
     const pageAccessToken = pageData.page_token_encrypted || null;
     const encryptedPageToken = pageAccessToken ? encryptPageToken(pageAccessToken) : null;
     const inspectedPermissions = pageData.publishing_enabled && pageAccessToken
@@ -61,6 +63,8 @@ export class PageSyncService {
       ? Boolean(pageAccessToken) && permissions?.includes("pages_manage_posts") === true
       : undefined;
     const permissionsCheckedAt = pageData.publishing_enabled ? new Date() : undefined;
+
+    await this.assertPartnerCanSync(pageData.partner_id);
 
     const page = await pageRepository.upsertPage({
       partner_id: pageData.partner_id,
@@ -137,6 +141,11 @@ export class PageSyncService {
 
       if (!fbResponse.success) {
         throw new Error("Failed to fetch page insights");
+      }
+
+      const connectedPage = await pageRepository.getPageByFbPageId(params.facebookPageId);
+      if (!connectedPage?.is_active) {
+        return [];
       }
 
       const payload = fbResponse.data as { data?: Array<{ name: string; period?: string; values?: Array<{ value: unknown; end_time?: string }> }> };
@@ -239,6 +248,11 @@ export class PageSyncService {
 
       let savedCount = 0;
 
+      const connectedPage = await pageRepository.getPageByFbPageId(pageId);
+      if (!connectedPage?.is_active) {
+        return 0;
+      }
+
       console.log(`[facebook-sync] Breakdown Keys available:`, Array.from(breakdownByDate.keys()));
 
       for (const row of pageRows) {
@@ -273,6 +287,13 @@ export class PageSyncService {
         error instanceof Error ? error.message : String(error)
       );
       return 0;
+    }
+  }
+
+  private async assertPartnerCanSync(partnerId: string): Promise<void> {
+    const partner = await partnerRepository.getPartnerById(partnerId);
+    if (!partner || partner.facebook_data_deleted_at) {
+      throw new Error("Facebook sync stopped because the Partner account was deleted");
     }
   }
 }

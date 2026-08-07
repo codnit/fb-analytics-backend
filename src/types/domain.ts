@@ -27,6 +27,7 @@ export interface PartnerEntity extends BaseEntity {
   reason_joining?: string | null;
   password_hash?: string | null;
   facebook_user_token_encrypted?: string | null;
+  facebook_data_deleted_at?: Date | null;
   created_at: Date;
 }
 
@@ -137,6 +138,7 @@ export interface PartnerCreateInput {
   reason_joining?: string | null;
   password_hash?: string | null;
   facebook_user_token_encrypted?: string | null;
+  facebook_data_deleted_at?: Date | null;
 }
 
 export interface ConnectedPageCreateInput {

@@ -86,6 +86,11 @@ export class PostSyncService {
         await dumpApiData(`post_earnings_${params.facebookPostId}`, earningsResponse.data);
       }
 
+      const storedPost = await postRepository.getPostByFbPostId(params.fbPostId);
+      if (!storedPost) {
+        return { insights: [], earningsSaved: 0 };
+      }
+
       const [insights, earningsSaved] = await Promise.all([
         insightsResponse.success
           ? this.saveInsightsParallel(params.fbPostId, insightsResponse.data as RawInsightPayload)

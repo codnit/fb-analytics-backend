@@ -46,6 +46,17 @@ export class SaveFacebookDataController extends BaseController {
         } catch (e) {}
       }
 
+      if (partnerId) {
+        const authenticatedPartner = await partnerRepository.getPartnerById(partnerId);
+        if (!authenticatedPartner || authenticatedPartner.facebook_data_deleted_at) {
+          return res.status(401).json({
+            success: false,
+            message: "This partner account has been deleted or is being deleted.",
+            code: "PARTNER_ACCOUNT_DELETED",
+          });
+        }
+      }
+
       const result = await saveFacebookDataService.initialConnectionSync(accessToken, body.registrationData, partnerId);
       const needsAdditionalInfo = !isPartnerOnboardingComplete(result.partner);
       const partnerToken = !needsAdditionalInfo && result.partner?.id

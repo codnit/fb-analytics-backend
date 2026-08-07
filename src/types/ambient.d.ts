@@ -17,15 +17,18 @@ declare module "express" {
     query: ReqQuery;
     originalUrl: string;
     method: string;
+    protocol: string;
     ip: string;
     socket: { remoteAddress?: string };
     headers: Record<string, string | string[] | undefined>;
+    get(name: string): string | undefined;
   }
 
   export interface Response<ResBody = any> {
     status(code: number): Response<ResBody>;
     json(body: ResBody): Response<ResBody>;
     send(body?: any): Response<ResBody>;
+    type(type: string): Response<ResBody>;
     sendFile(path: string, options?: any, callback?: (err?: Error) => void): void;
     setHeader(name: string, value: string | string[]): Response<ResBody>;
     write(chunk: any, ...args: any[]): boolean;
@@ -163,6 +166,10 @@ declare module "axios" {
 }
 
 declare module "@prisma/client" {
+  export const Prisma: {
+    DbNull: any;
+  };
+
   export class PrismaClient {
     constructor(options?: any);
     [key: string]: any;
