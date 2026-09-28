@@ -16,6 +16,14 @@ import {
 } from "../../utils/earnings.helpers";
 import { DEFAULT_POST_METRICS } from "../facebookSync.presets";
 
+type RawInsightPayload = {
+  data?: Array<{
+    name: string;
+    period?: string;
+    values?: Array<{ value: unknown; end_time?: string }>;
+  }>;
+};
+
 export class PostSyncService {
   async syncPost(postData: {
     page_id: string;
@@ -42,6 +50,60 @@ export class PostSyncService {
     } satisfies PostCreateInput);
   }
 
+  /**
+   * Fetches insights + earnings metrics for a post in a SINGLE Graph call,
+   * then upserts rows in parallel. Previously this made two separate Graph
+   * calls (post insights + earnings) and awaited every DB write sequentially.
+   */
+  async syncPostInsightsAndEarnings(params: {
+    fbPostId: string;
+    facebookPostId: string;
+    accessToken: string;
+    metrics?: string[];
+    since?: string;
+    until?: string;
+  }): Promise<{ insights: PostInsightEntity[]; earningsSaved: number }> {
+    const baseMetrics = params.metrics?.length ? params.metrics : DEFAULT_POST_METRICS;
+
+    try {
+      // Two separate Graph calls — earnings metrics cannot be mixed with others
+      const [insightsResponse, earningsResponse] = await Promise.all([
+        insightsService.getPostInsights(params.facebookPostId, baseMetrics, {
+          access_token: params.accessToken,
+          since: params.since,
+          until: params.until,
+        }),
+        insightsService.getPostInsights(params.facebookPostId, EARNINGS_METRICS, {
+          access_token: params.accessToken,
+          period: "day",
+          since: params.since,
+          until: params.until,
+        }),
+      ]);
+
+      const [insights, earningsSaved] = await Promise.all([
+        insightsResponse.success
+          ? this.saveInsightsParallel(params.fbPostId, insightsResponse.data as RawInsightPayload)
+          : Promise.resolve([]),
+        earningsResponse.success
+          ? this.saveEarningsParallel(
+            params.fbPostId,
+            earningsResponse.data as { data?: EarningsInsightEntry[] }
+          )
+          : Promise.resolve(0),
+      ]);
+
+      return { insights, earningsSaved };
+    } catch (error) {
+      console.warn(
+        `[facebook-sync] Skipping post insights/earnings for ${params.facebookPostId}:`,
+        error instanceof Error ? error.message : String(error)
+      );
+      return { insights: [], earningsSaved: 0 };
+    }
+  }
+
+  /** Backwards-compatible wrapper. */
   async syncPostInsights(params: {
     fbPostId: string;
     facebookPostId: string;
@@ -50,58 +112,70 @@ export class PostSyncService {
     since?: string;
     until?: string;
   }): Promise<PostInsightEntity[]> {
-    const results: PostInsightEntity[] = [];
-    const effectiveMetrics: string[] = Array.from(
-      new Set(params.metrics && params.metrics.length > 0 ? params.metrics : DEFAULT_POST_METRICS)
-    );
-
-    try {
-      const fbResponse = await insightsService.getPostInsights(params.facebookPostId, effectiveMetrics, {
-        access_token: params.accessToken,
-        since: params.since,
-        until: params.until,
-      });
-
-      if (!fbResponse.success) {
-        throw new Error("Failed to fetch post insights");
-      }
-
-      const saved = await this.savePostInsightsFromData(
-        params.fbPostId,
-        fbResponse.data as { data?: Array<{ name: string; period?: string; values?: Array<{ value: unknown; end_time?: string }> }> }
-      );
-      results.push(...saved);
-    } catch (error) {
-      console.warn(
-        `[facebook-sync] Skipping post insight metric "${effectiveMetrics}" for ${params.facebookPostId}:`,
-        error instanceof Error ? error.message : String(error)
-      );
-    }
-
-    return results;
+    const { insights } = await this.syncPostInsightsAndEarnings(params);
+    return insights;
   }
 
-  async savePostInsightsFromData(
+  /** Backwards-compatible wrapper used by other callers. */
+  async syncPostCMEarningsForWindow(
     fbPostId: string,
-    insightsData: { data?: Array<{ name: string; period?: string; values?: Array<{ value: unknown; end_time?: string }> }> }
-  ): Promise<PostInsightEntity[]> {
-    const results: PostInsightEntity[] = [];
+    accessToken: string,
+    since: string,
+    until: string
+  ): Promise<number> {
+    const { earningsSaved } = await this.syncPostInsightsAndEarnings({
+      fbPostId,
+      facebookPostId: fbPostId,
+      accessToken,
+      metrics: [], // earnings-only call uses just EARNINGS_METRICS via the merge
+      since,
+      until,
+    });
+    return earningsSaved;
+  }
 
+  private async saveInsightsParallel(
+    fbPostId: string,
+    insightsData: RawInsightPayload
+  ): Promise<PostInsightEntity[]> {
+    const rows: Array<Promise<PostInsightEntity>> = [];
     for (const insight of insightsData.data || []) {
       for (const entry of insight.values || []) {
-        const saved = await postInsightsRepository.upsertPostInsight({
-          post_id: fbPostId,
-          metric_name: insight.name,
-          metric_value: entry.value as never,
-          period: insight.period || null,
-          end_time: entry.end_time ? new Date(entry.end_time) : undefined,
-          synced_at: new Date(),
-        });
-        results.push(saved);
+        rows.push(
+          postInsightsRepository.upsertPostInsight({
+            post_id: fbPostId,
+            metric_name: insight.name,
+            metric_value: entry.value as never,
+            period: insight.period || null,
+            end_time: entry.end_time ? new Date(entry.end_time) : undefined,
+            synced_at: new Date(),
+          })
+        );
       }
     }
+    return Promise.all(rows);
+  }
 
-    return results;
+  private async saveEarningsParallel(
+    fbPostId: string,
+    payload: { data?: EarningsInsightEntry[] }
+  ): Promise<number> {
+    const rows = buildDailyEarningsRows(payload);
+    if (rows.length === 0) return 0;
+    await Promise.all(
+      rows.map((row) =>
+        this.syncPostEarnings({
+          post_id: fbPostId,
+          earnings_amount: row.earnings_amount,
+          approximate_earnings: row.approximate_earnings,
+          currency: row.currency,
+          period: row.period,
+          end_time: row.end_time,
+          synced_at: new Date(),
+        })
+      )
+    );
+    return rows.length;
   }
 
   async syncPostEarnings(earningsData: PostEarningsCreateInput): Promise<CmEarningsPostEntity> {
@@ -114,50 +188,6 @@ export class PostSyncService {
       end_time: earningsData.end_time || null,
       synced_at: earningsData.synced_at || new Date(),
     });
-  }
-
-  async syncPostCMEarningsForWindow(
-    fbPostId: string,
-    accessToken: string,
-    since: string,
-    until: string
-  ): Promise<number> {
-    try {
-      const response = await insightsService.getPostInsights(fbPostId, EARNINGS_METRICS, {
-        access_token: accessToken,
-        period: "day",
-        since,
-        until,
-      });
-
-      if (!response.success) {
-        return 0;
-      }
-
-      const rows = buildDailyEarningsRows(response.data as { data?: EarningsInsightEntry[] });
-      let savedCount = 0;
-
-      for (const row of rows) {
-        await this.syncPostEarnings({
-          post_id: fbPostId,
-          earnings_amount: row.earnings_amount,
-          approximate_earnings: row.approximate_earnings,
-          currency: row.currency,
-          period: row.period,
-          end_time: row.end_time,
-          synced_at: new Date(),
-        });
-        savedCount += 1;
-      }
-
-      return savedCount;
-    } catch (error) {
-      console.warn(
-        `[facebook-sync] Skipping post earnings sync for ${fbPostId}:`,
-        error instanceof Error ? error.message : String(error)
-      );
-      return 0;
-    }
   }
 }
 

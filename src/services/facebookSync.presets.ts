@@ -22,3 +22,4 @@ export const DEFAULT_POST_METRICS = [
 export const DEFAULT_SYNC_WINDOW_DAYS = 90;
 export const DEFAULT_POST_FETCH_LIMIT = 100;
 export const DEFAULT_POST_WRITE_CHUNK = 10;
+export const DEFAULT_POST_CONCURRENCY = 10;

@@ -22,6 +22,7 @@ import {
   DEFAULT_POST_WRITE_CHUNK,
   DEFAULT_SYNC_WINDOW_DAYS,
 } from "../facebookSync.presets";
+import { mapLimit } from "../../utils/pLimits";
 
 export class FacebookSyncOrchestrator extends BaseService {
   constructor() {
@@ -37,10 +38,7 @@ export class FacebookSyncOrchestrator extends BaseService {
 
       await Promise.all(
         (pagesResponse.data as FacebookPage[]).map(async (fbPage) => {
-          if (!fbPage?.id) {
-            return;
-          }
-
+          if (!fbPage?.id) return;
           try {
             const job = await facebookSyncQueue.enqueuePageSync({
               partnerId: partner.id,
@@ -52,7 +50,6 @@ export class FacebookSyncOrchestrator extends BaseService {
               pageMetrics: DEFAULT_PAGE_METRICS,
               postMetrics: DEFAULT_POST_METRICS,
             });
-
             queuedPages.push({
               fbPageId: fbPage.id,
               pageName: fbPage.name || null,
@@ -67,12 +64,7 @@ export class FacebookSyncOrchestrator extends BaseService {
         })
       );
 
-      return {
-        partner,
-        pagesQueued: queuedPages.length,
-        queuedPages,
-        errors,
-      };
+      return { partner, pagesQueued: queuedPages.length, queuedPages, errors };
     });
   }
 
@@ -81,9 +73,10 @@ export class FacebookSyncOrchestrator extends BaseService {
       const fbPage = payload.facebookPage;
       const accessToken = fbPage.access_token || payload.accessToken;
       const syncUntil = new Date().toISOString();
+      const since = this.getWindowStart(payload.syncWindowDays ?? DEFAULT_SYNC_WINDOW_DAYS);
       let syncJob: SyncJobEntity | null = null;
 
-      console.log(`[facebook-sync] 🚀 Starting full sync for page: ${fbPage.name || fbPage.id} (${fbPage.id})`);
+      console.log(`[facebook-sync] 🚀 Starting sync for page: ${fbPage.name || fbPage.id}`);
 
       try {
         const syncedPage = await pageSyncService.syncPage({
@@ -101,103 +94,100 @@ export class FacebookSyncOrchestrator extends BaseService {
         syncJob = await syncJobService.createSyncJob(syncedPage.id, "page_sync");
         await syncJobService.updateSyncJob(syncJob.id, "running");
 
-        console.log(`[facebook-sync] 📊 Fetching page insights for ${fbPage.id}...`);
-        const pageInsights = await pageSyncService.syncPageInsights({
+        // Kick off page insights + page earnings + the post pagination loop
+        // in parallel. They share no state.
+        const pageInsightsPromise = pageSyncService.syncPageInsights({
           pageId: syncedPage.id,
           facebookPageId: fbPage.id,
           accessToken,
           metrics: payload.pageMetrics || DEFAULT_PAGE_METRICS,
           period: "day",
-          since: this.getWindowStart(payload.syncWindowDays ?? DEFAULT_SYNC_WINDOW_DAYS),
+          since,
           until: syncUntil,
         });
-        console.log(`[facebook-sync] ✅ Saved ${pageInsights.length} page insights for ${fbPage.id}`);
 
-        let postsSaved = 0;
-        let postsQueued = 0;
+        const postsCollected: FacebookPost[] = [];
+        const allPostJobs: PostSyncJobPayload[] = [];
         let nextPageUrl: string | undefined;
-        const allFbPosts: FacebookPost[] = [];
-
-        console.log(`[facebook-sync] 📝 Starting to fetch posts for page ${fbPage.id}...`);
         let pageNum = 1;
+        const writeChunkSize = payload.postWriteChunkSize ?? DEFAULT_POST_WRITE_CHUNK;
 
         do {
           const postsPage = await insightsService.getPagePostsPage(fbPage.id, {
             access_token: accessToken,
             limit: payload.postBatchSize ?? DEFAULT_POST_FETCH_LIMIT,
-            since: this.getWindowStart(payload.syncWindowDays ?? DEFAULT_SYNC_WINDOW_DAYS),
+            since,
             until: syncUntil,
             nextPageUrl,
           });
 
-          const postJobs: PostSyncJobPayload[] = [];
-          const fbPosts = postsPage.data.filter((rawPost): rawPost is FacebookPost => Boolean(rawPost?.id));
-          allFbPosts.push(...fbPosts);
-          console.log(`[facebook-sync] 🔄 Fetched batch ${pageNum} (${fbPosts.length} posts) from Facebook for page ${fbPage.id}`);
+          const fbPosts = postsPage.data.filter((p): p is FacebookPost => Boolean(p?.id));
+          postsCollected.push(...fbPosts);
+          console.log(`[facebook-sync] 🔄 batch ${pageNum}: ${fbPosts.length} posts`);
 
-          const postWriteChunkSize = payload.postWriteChunkSize ?? DEFAULT_POST_WRITE_CHUNK;
+          // Parallel upsert with bounded concurrency instead of awaiting one
+          // post at a time. Big win on N posts.
+          const syncedPosts = await mapLimit(fbPosts, writeChunkSize, (fbPost) =>
+            postSyncService.syncPost({
+              page_id: fbPage.id,
+              fb_post_id: fbPost.id,
+              message: fbPost.message,
+              type: fbPost.status_type,
+              full_picture: fbPost.full_picture || null,
+              comments_count: fbPost.comments?.summary?.total_count || 0,
+              shares_count: fbPost.shares?.count || 0,
+              permalink: fbPost.permalink_url,
+              created_time: fbPost.created_time,
+            })
+          );
 
-          for (let index = 0; index < fbPosts.length; index += postWriteChunkSize) {
-            const chunk = fbPosts.slice(index, index + postWriteChunkSize);
-
-            for (const fbPost of chunk) {
-              const syncedPost = await postSyncService.syncPost({
-                page_id: fbPage.id,
-                fb_post_id: fbPost.id,
-                message: fbPost.message,
-                type: fbPost.status_type,
-                full_picture: fbPost.full_picture || null,
-                comments_count: fbPost.comments?.summary?.total_count || 0,
-                shares_count: fbPost.shares?.count || 0,
-                permalink: fbPost.permalink_url,
-                created_time: fbPost.created_time,
-              });
-
-              postsSaved += 1;
-              postJobs.push({
-                pageId: syncedPage.id,
-                postId: syncedPost.id,
-                fbPostId: syncedPost.fb_post_id,
-                accessToken,
-              });
-            }
-          }
-
-          if (postJobs.length > 0) {
-            await facebookSyncQueue.enqueuePostSyncBulk(postJobs);
-            postsQueued += postJobs.length;
+          for (const syncedPost of syncedPosts) {
+            allPostJobs.push({
+              pageId: syncedPage.id,
+              postId: syncedPost.id,
+              fbPostId: syncedPost.fb_post_id,
+              accessToken,
+            });
           }
 
           nextPageUrl = postsPage.paging?.next;
           pageNum++;
         } while (nextPageUrl);
 
-        const pageEarningsSaved = await pageSyncService.syncPageCMEarningsForWindow(
-          fbPage.id,
-          accessToken,
-          this.getWindowStart(payload.syncWindowDays ?? DEFAULT_SYNC_WINDOW_DAYS),
-          syncUntil,
-          allFbPosts
-        );
-        console.log(`[facebook-sync] 💰 Saved ${pageEarningsSaved} page earnings rows for ${fbPage.id}`);
+        // Enqueue ALL post-sync jobs in one bulk write.
+        let postsQueued = 0;
+        if (allPostJobs.length > 0) {
+          await facebookSyncQueue.enqueuePostSyncBulk(allPostJobs);
+          postsQueued = allPostJobs.length;
+        }
+
+        const [pageInsights, pageEarningsSaved] = await Promise.all([
+          pageInsightsPromise,
+          pageSyncService.syncPageCMEarningsForWindow(fbPage.id, accessToken, since, syncUntil, postsCollected),
+        ]);
 
         await syncJobService.updateSyncJob(syncJob.id, "completed");
 
-        console.log(`[facebook-sync] 🎉 Successfully fully synced page: ${fbPage.name || fbPage.id} (${fbPage.id})`);
-        console.log(`[facebook-sync] 📈 Page summary: ${postsSaved} posts saved, ${postsQueued} post insights queued.`);
+        console.log(
+          `[facebook-sync] 🎉 Page ${fbPage.id}: ${postsCollected.length} posts saved, ${postsQueued} insight jobs queued, ${pageInsights.length} page insights, ${pageEarningsSaved} earnings rows.`
+        );
 
         return {
           pageId: syncedPage.id,
           fbPageId: fbPage.id,
           pageName: syncedPage.page_name || fbPage.name || null,
-          postsSaved,
+          postsSaved: postsCollected.length,
           postsQueued,
           pageInsightsSaved: pageInsights.length,
         };
       } catch (error) {
         console.error(`[facebook-sync] ❌ Error syncing page ${fbPage.id}:`, error);
         if (syncJob) {
-          await syncJobService.updateSyncJob(syncJob.id, "failed", error instanceof Error ? error.message : String(error));
+          await syncJobService.updateSyncJob(
+            syncJob.id,
+            "failed",
+            error instanceof Error ? error.message : String(error)
+          );
         }
         throw error;
       }
@@ -208,42 +198,41 @@ export class FacebookSyncOrchestrator extends BaseService {
     return this.run("processPostSyncJob", async () => {
       const syncJob = await syncJobService.createSyncJob(payload.pageId, "post_sync");
       const syncUntil = new Date().toISOString();
+      const since = this.getWindowStart(DEFAULT_SYNC_WINDOW_DAYS);
 
       try {
         await syncJobService.updateSyncJob(syncJob.id, "running");
 
-        const insights = await postSyncService.syncPostInsights({
-          fbPostId: payload.fbPostId,
-          facebookPostId: payload.fbPostId,
-          accessToken: payload.accessToken,
-          metrics: DEFAULT_POST_METRICS,
-          since: this.getWindowStart(DEFAULT_SYNC_WINDOW_DAYS),
-          until: syncUntil,
-        });
+        // Single Graph call now returns both insights + earnings; both DB
+        // writes run in parallel inside syncPostInsightsAndEarnings.
+        const [{ insights, earningsSaved }, post] = await Promise.all([
+          postSyncService.syncPostInsightsAndEarnings({
+            fbPostId: payload.fbPostId,
+            facebookPostId: payload.fbPostId,
+            accessToken: payload.accessToken,
+            metrics: DEFAULT_POST_METRICS,
+            since,
+            until: syncUntil,
+          }),
+          postRepository.getPostById(payload.postId),
+        ]);
 
-        const postEarningsSaved = await postSyncService.syncPostCMEarningsForWindow(
-          payload.fbPostId,
-          payload.accessToken,
-          this.getWindowStart(DEFAULT_SYNC_WINDOW_DAYS),
-          syncUntil
-        );
-        console.log(`[facebook-sync] 💰 Saved ${postEarningsSaved} post earnings rows for ${payload.fbPostId}`);
-
-        const post = await postRepository.getPostById(payload.postId);
-
-        if (!post) {
-          throw new Error(`Post ${payload.postId} not found`);
-        }
+        if (!post) throw new Error(`Post ${payload.postId} not found`);
 
         await syncJobService.updateSyncJob(syncJob.id, "completed");
 
-        return {
-          post,
-          insightsSaved: insights.length,
-        };
+        if (earningsSaved > 0) {
+          console.log(`[facebook-sync] 💰 ${earningsSaved} earnings rows for ${payload.fbPostId}`);
+        }
+
+        return { post, insightsSaved: insights.length };
       } catch (error) {
-        console.error(`[facebook-sync] ❌ Error fetching post insights for ${payload.fbPostId}:`, error);
-        await syncJobService.updateSyncJob(syncJob.id, "failed", error instanceof Error ? error.message : String(error));
+        console.error(`[facebook-sync] ❌ Error syncing post ${payload.fbPostId}:`, error);
+        await syncJobService.updateSyncJob(
+          syncJob.id,
+          "failed",
+          error instanceof Error ? error.message : String(error)
+        );
         throw error;
       }
     });
